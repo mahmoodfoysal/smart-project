@@ -99,7 +99,7 @@ export default function DashboardPage() {
   const splitSeries = [58.4, 36.3, 15.3];
 
   return (
-    <div className="h-full flex flex-col font-sans">
+    <div className="h-full flex flex-col font-sans p-1 md:p-0">
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>

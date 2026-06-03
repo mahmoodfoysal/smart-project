@@ -1,31 +1,23 @@
-import axios from 'axios';
-import { auth } from '@/firebase/firebase';
+import axios from "axios";
 
 // Create an Axios instance
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Add a request interceptor to automatically attach the Firebase ID token
+// Add a request interceptor to attach the custom JWT from localStorage
 apiClient.interceptors.request.use(
-  async (config) => {
-    // Check if there is a currently logged in user
-    const user = auth.currentUser;
-    
-    if (user) {
-      try {
-        // Fetch the Firebase Auth token
-        const token = await user.getIdToken();
-        // Attach the token to the Authorization header
+  (config) => {
+    // Check if we are running in the browser
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Error fetching Firebase token:', error);
       }
     }
-    
     return config;
   },
   (error) => {
