@@ -9,6 +9,7 @@ import {
   showSuccess,
   showConfirmation,
 } from "@/components/pages/Alert";
+import AdminRoute from "@/routes/AdminRoute";
 
 const ROLE_MAP = {
   200: "Admin",
@@ -203,6 +204,7 @@ export default function ManageAdminPage() {
   });
 
   return (
+    <AdminRoute>
     <div className="h-full flex flex-col font-sans">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -573,5 +575,6 @@ export default function ManageAdminPage() {
         </div>
       </>
     </div>
+    </AdminRoute>
   );
 }

@@ -48,18 +48,22 @@ export default function ProjectTaskBoard() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch projects
-      const projRes = await apiClient.get("/api/smart-project/get-project-list");
+      const projRes = await apiClient.get(
+        "/api/smart-project/get-project-list",
+      );
       const allProjects = projRes.data?.list_data || projRes.data || [];
-      const currentProject = allProjects.find((p) => (p._id || p.id) === projectId);
-      
+      const currentProject = allProjects.find(
+        (p) => (p._id || p.id) === projectId,
+      );
+
       if (!currentProject) {
         setError("Project not found.");
         setIsLoading(false);
         return;
       }
-      
+
       // Initialize tasks and members array if it doesn't exist
       if (!currentProject.tasks) {
         currentProject.tasks = [];
@@ -92,7 +96,7 @@ export default function ProjectTaskBoard() {
   const handleOpenDrawer = (task = null) => {
     setFormErrors({});
     setSelectedTask(task);
-    
+
     if (task) {
       let formattedDate = "";
       if (task.due_date) {
@@ -129,20 +133,27 @@ export default function ProjectTaskBoard() {
   };
 
   const handleBlur = () => {
-    setFormErrors(validateTaskSchema(formData, project?.tasks || [], selectedTask));
+    setFormErrors(
+      validateTaskSchema(formData, project?.tasks || [], selectedTask),
+    );
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      setFormErrors(validateTaskSchema(updated, project?.tasks || [], selectedTask));
+      setFormErrors(
+        validateTaskSchema(updated, project?.tasks || [], selectedTask),
+      );
       return updated;
     });
   };
 
   const generateTaskId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   };
 
   const saveProject = async (updatedProject, successMsg) => {
@@ -150,7 +161,7 @@ export default function ProjectTaskBoard() {
       setIsSubmitting(true);
       const response = await apiClient.post(
         "/api/smart-project/insert-update-project-list",
-        updatedProject
+        updatedProject,
       );
 
       if (response) {
@@ -162,7 +173,9 @@ export default function ProjectTaskBoard() {
       console.error("Error saving project:", err);
       showError(
         "Operation Failed",
-        err.response?.data?.error || err.message || "An error occurred while saving."
+        err.response?.data?.error ||
+          err.message ||
+          "An error occurred while saving.",
       );
       return false;
     } finally {
@@ -173,10 +186,17 @@ export default function ProjectTaskBoard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const errors = validateTaskSchema(formData, project?.tasks || [], selectedTask);
+    const errors = validateTaskSchema(
+      formData,
+      project?.tasks || [],
+      selectedTask,
+    );
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      showError("Validation Error", "Please fix the highlighted errors before submitting.");
+      showError(
+        "Validation Error",
+        "Please fix the highlighted errors before submitting.",
+      );
       return;
     }
 
@@ -202,8 +222,11 @@ export default function ProjectTaskBoard() {
     }
 
     const updatedProject = { ...project, tasks: updatedTasks };
-    
-    const isSaved = await saveProject(updatedProject, selectedTask ? "Task updated!" : "Task created!");
+
+    const isSaved = await saveProject(
+      updatedProject,
+      selectedTask ? "Task updated!" : "Task created!",
+    );
     if (isSaved) {
       handleCloseDrawer();
     }
@@ -214,7 +237,7 @@ export default function ProjectTaskBoard() {
       "Delete Task?",
       `Are you sure you want to permanently delete "${taskToDelete.title}"?`,
       "Yes, Delete",
-      "Cancel"
+      "Cancel",
     );
 
     if (!result.isConfirmed) return;
@@ -222,7 +245,7 @@ export default function ProjectTaskBoard() {
     showProcessing("Deleting Task...", "Please wait.");
 
     const updatedTasks = project.tasks.filter(
-      (t) => (t.id || t._id) !== (taskToDelete.id || taskToDelete._id)
+      (t) => (t.id || t._id) !== (taskToDelete.id || taskToDelete._id),
     );
 
     const updatedProject = { ...project, tasks: updatedTasks };
@@ -252,7 +275,10 @@ export default function ProjectTaskBoard() {
     const updatedMembers = [...(project.members || []), selectedNewMember];
     const updatedProject = { ...project, members: updatedMembers };
     showProcessing("Adding Member...", "Please wait.");
-    const success = await saveProject(updatedProject, "Member added successfully.");
+    const success = await saveProject(
+      updatedProject,
+      "Member added successfully.",
+    );
     if (success) {
       setIsAddMemberOpen(false);
       setSelectedNewMember("");
@@ -260,17 +286,37 @@ export default function ProjectTaskBoard() {
   };
 
   // Derive form validity to dynamically lock the Submit button
-  const isFormValid = Object.keys(validateTaskSchema(formData, project?.tasks || [], selectedTask)).length === 0;
+  const isFormValid =
+    Object.keys(
+      validateTaskSchema(formData, project?.tasks || [], selectedTask),
+    ).length === 0;
 
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center justify-center text-text-muted">
-          <svg className="animate-spin h-8 w-8 text-primary mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <svg
+            className="animate-spin h-8 w-8 text-primary mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
           </svg>
-          <span className="text-sm font-bold uppercase tracking-wider">Loading Project...</span>
+          <span className="text-sm font-bold uppercase tracking-wider">
+            Loading Project...
+          </span>
         </div>
       </div>
     );
@@ -280,8 +326,13 @@ export default function ProjectTaskBoard() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-red-500 mb-2">{error || "Project Not Found"}</h2>
-          <Link href="/dashboard/projects" className="text-primary hover:underline text-sm font-bold">
+          <h2 className="text-xl font-bold text-red-500 mb-2">
+            {error || "Project Not Found"}
+          </h2>
+          <Link
+            href="/dashboard/projects"
+            className="text-primary hover:underline text-sm font-bold"
+          >
             &larr; Back to Projects
           </Link>
         </div>
@@ -291,32 +342,46 @@ export default function ProjectTaskBoard() {
 
   const filteredTasks = (project.tasks || []).filter((t) => {
     if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
-    if (memberFilter !== "All" && t.assigned_member !== memberFilter) return false;
+    if (memberFilter !== "All" && t.assigned_member !== memberFilter)
+      return false;
     return true;
   });
 
   const todoTasks = filteredTasks.filter((t) => t.status === "Todo");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "In Progress");
+  const inProgressTasks = filteredTasks.filter(
+    (t) => t.status === "In Progress",
+  );
   const completedTasks = filteredTasks.filter((t) => t.status === "Completed");
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case "High": return "bg-red-500/10 text-red-500 border-red-500/20";
-      case "Medium": return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "Low": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      default: return "bg-gray-500/10 text-gray-500";
+      case "High":
+        return "bg-red-500/10 text-red-500 border-red-500/20";
+      case "Medium":
+        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+      case "Low":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      default:
+        return "bg-gray-500/10 text-gray-500";
     }
   };
 
   const renderTaskCard = (task) => {
     const isCompleted = task.status === "Completed";
-    const user = users.find(u => u.email === task.assigned_member) || { name: task.assigned_member };
+    const user = users.find((u) => u.email === task.assigned_member) || {
+      name: task.assigned_member,
+    };
 
     return (
-      <div key={task._id || task.id} className={`p-4 rounded-xl border ${isCompleted ? 'bg-background/40 border-card-border/50' : 'bg-background border-card-border shadow-sm'} flex flex-col gap-3 group relative`}>
+      <div
+        key={task._id || task.id}
+        className={`p-4 rounded-xl border ${isCompleted ? "bg-background/40 border-card-border/50" : "bg-background border-card-border shadow-sm"} flex flex-col gap-3 group relative`}
+      >
         <div className="flex justify-between items-start">
           <div className="flex gap-2 items-center">
-            <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${getPriorityColor(task.priority)}`}>
+            <span
+              className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${getPriorityColor(task.priority)}`}
+            >
               {task.priority}
             </span>
             {isCompleted && (
@@ -326,25 +391,51 @@ export default function ProjectTaskBoard() {
             )}
           </div>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-            <button 
+            <button
               onClick={() => handleOpenDrawer(task)}
               className="p-1.5 text-text-muted hover:text-primary hover:bg-card-bg rounded-md transition-colors"
               title="Edit Task"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
+              </svg>
             </button>
-            <button 
+            <button
               onClick={() => handleDeleteTask(task)}
               className="p-1.5 text-text-muted hover:text-[#f1416c] hover:bg-card-bg rounded-md transition-colors"
               title="Delete Task"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
             </button>
           </div>
         </div>
 
         <div>
-          <h4 className={`text-sm font-bold text-foreground ${isCompleted ? 'line-through text-text-muted' : ''}`}>
+          <h4
+            className={`text-sm font-bold text-foreground ${isCompleted ? "line-through text-text-muted" : ""}`}
+          >
             {task.title}
           </h4>
           {task.description && (
@@ -357,10 +448,15 @@ export default function ProjectTaskBoard() {
         <div className="flex items-center justify-between mt-1 pt-3 border-t border-card-border">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary uppercase border border-primary/30">
-              {user.name?.substring(0, 2) || task.assigned_member?.substring(0, 2) || "?"}
+              {user.name?.substring(0, 2) ||
+                task.assigned_member?.substring(0, 2) ||
+                "?"}
             </div>
             <span className="text-[10px] font-bold text-text-muted">
-              {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {new Date(task.due_date).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              })}
             </span>
           </div>
 
@@ -383,8 +479,23 @@ export default function ProjectTaskBoard() {
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <Link href="/dashboard/projects" className="text-text-muted hover:text-primary text-xs font-bold uppercase tracking-wider flex items-center gap-1 mb-2 transition-colors w-fit">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          <Link
+            href="/dashboard/projects"
+            className="text-text-muted hover:text-primary text-xs font-bold uppercase tracking-wider flex items-center gap-1 mb-2 transition-colors w-fit"
+          >
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
             Back to Projects
           </Link>
           <h1 className="text-2xl font-black text-foreground uppercase tracking-wide flex items-center gap-3">
@@ -407,9 +518,15 @@ export default function ProjectTaskBoard() {
             className="bg-card-bg border border-card-border text-foreground text-xs font-bold uppercase tracking-wider rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary appearance-none"
           >
             <option value="All">All Members</option>
-            {(project.members || []).map(email => {
-              const u = users.find(user => user.email === email) || { name: email };
-              return <option key={email} value={email}>{u.name || email}</option>;
+            {(project.members || []).map((email) => {
+              const u = users.find((user) => user.email === email) || {
+                name: email,
+              };
+              return (
+                <option key={email} value={email}>
+                  {u.name || email}
+                </option>
+              );
             })}
           </select>
 
@@ -428,7 +545,19 @@ export default function ProjectTaskBoard() {
             onClick={() => handleOpenDrawer()}
             className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all duration-200 flex items-center justify-center gap-2 uppercase tracking-wide"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 4v16m8-8H4"
+              ></path>
+            </svg>
             Add Task
           </button>
         </div>
@@ -438,7 +567,7 @@ export default function ProjectTaskBoard() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
-             Team Workload
+            Team Workload
           </h2>
           <div>
             {isAddMemberOpen ? (
@@ -448,20 +577,48 @@ export default function ProjectTaskBoard() {
                   onChange={(e) => setSelectedNewMember(e.target.value)}
                   className="bg-background border border-card-border text-xs font-bold text-foreground rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary"
                 >
-                  <option value="" disabled>Select User...</option>
-                  {users.filter(u => !(project.members || []).includes(u.email)).map(u => (
-                    <option key={u.id || u._id} value={u.email}>{u.name || u.email}</option>
-                  ))}
+                  <option value="" disabled>
+                    Select User...
+                  </option>
+                  {users
+                    .filter((u) => !(project.members || []).includes(u.email))
+                    .map((u) => (
+                      <option key={u.id || u._id} value={u.email}>
+                        {u.name || u.email}
+                      </option>
+                    ))}
                 </select>
-                <button onClick={handleAddMember} className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-hover">Add</button>
-                <button onClick={() => setIsAddMemberOpen(false)} className="bg-card-bg text-text-muted px-3 py-1.5 rounded-lg text-xs font-bold border border-card-border hover:bg-background">Cancel</button>
+                <button
+                  onClick={handleAddMember}
+                  className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-hover"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => setIsAddMemberOpen(false)}
+                  className="bg-card-bg text-text-muted px-3 py-1.5 rounded-lg text-xs font-bold border border-card-border hover:bg-background"
+                >
+                  Cancel
+                </button>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => setIsAddMemberOpen(true)}
                 className="text-primary hover:text-primary-hover text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                  />
+                </svg>
                 Add Member
               </button>
             )}
@@ -470,35 +627,68 @@ export default function ProjectTaskBoard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {(project.members || []).length === 0 && (
-             <div className="col-span-full p-6 border-2 border-dashed border-card-border rounded-xl text-center">
-                <p className="text-xs font-bold uppercase text-text-muted tracking-wider">No team members assigned yet.</p>
-             </div>
+            <div className="col-span-full p-6 border-2 border-dashed border-card-border rounded-xl text-center">
+              <p className="text-xs font-bold uppercase text-text-muted tracking-wider">
+                No team members assigned yet.
+              </p>
+            </div>
           )}
-          {(project.members || []).map(memberEmail => {
-             const user = users.find(u => u.email === memberEmail) || { name: memberEmail, email: memberEmail };
-             const memberTasks = (project.tasks || []).filter(t => t.assigned_member === memberEmail);
-             const completed = memberTasks.filter(t => t.status === "Completed").length;
-             const total = memberTasks.length;
-             const pending = total - completed;
+          {(project.members || []).map((memberEmail) => {
+            const user = users.find((u) => u.email === memberEmail) || {
+              name: memberEmail,
+              email: memberEmail,
+            };
+            const memberTasks = (project.tasks || []).filter(
+              (t) => t.assigned_member === memberEmail,
+            );
+            const completed = memberTasks.filter(
+              (t) => t.status === "Completed",
+            ).length;
+            const total = memberTasks.length;
+            const pending = total - completed;
 
-             return (
-               <div key={memberEmail} className="bg-card-bg border border-card-border shadow-sm rounded-2xl p-4 flex items-center gap-4">
-                 <div className="avatar placeholder">
-                   <div className="bg-background text-foreground rounded-full w-12 border-2 border-primary shadow-sm flex items-center justify-center">
-                     <span className="text-sm font-black uppercase">{(user.name || user.email).substring(0, 2)}</span>
-                   </div>
-                 </div>
-                 <div className="flex-1 min-w-0">
-                   <h3 className="text-sm font-bold text-foreground truncate">{user.name}</h3>
-                   <p className="text-[10px] text-text-muted truncate mb-2">{user.email}</p>
-                   <div className="flex gap-1.5">
-                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-background border border-card-border text-foreground" title="Total Tasks">T: {total}</span>
-                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20" title="Completed Tasks">D: {completed}</span>
-                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20" title="Pending Tasks">P: {pending}</span>
-                   </div>
-                 </div>
-               </div>
-             )
+            return (
+              <div
+                key={memberEmail}
+                className="bg-card-bg border border-card-border shadow-sm rounded-2xl p-4 flex items-center gap-4"
+              >
+                <div className="avatar placeholder">
+                  <div className="bg-background text-foreground rounded-full w-12 border-2 border-primary shadow-sm flex items-center justify-center">
+                    <span className="text-sm font-black uppercase">
+                      {(user.name || user.email).substring(0, 2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-foreground truncate">
+                    {user.name}
+                  </h3>
+                  <p className="text-[10px] text-text-muted truncate mb-2">
+                    {user.email}
+                  </p>
+                  <div className="flex gap-1.5">
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-background border border-card-border text-foreground"
+                      title="Total Tasks"
+                    >
+                      T: {total}
+                    </span>
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20"
+                      title="Completed Tasks"
+                    >
+                      D: {completed}
+                    </span>
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                      title="Pending Tasks"
+                    >
+                      P: {pending}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
           })}
         </div>
       </div>
@@ -591,7 +781,19 @@ export default function ProjectTaskBoard() {
               isDrawerOpen ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </button>
 
           <div className="p-6 border-b border-card-border">
@@ -619,12 +821,14 @@ export default function ProjectTaskBoard() {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   required
-                  className={`w-full bg-background border ${formErrors.title ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
+                  className={`w-full bg-background border ${formErrors.title ? "border-red-500 focus:border-red-500" : "border-card-border focus:border-primary"} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
                   placeholder="e.g. Design Landing Page"
                 />
                 {formErrors.title && (
                   <label className="label pb-0">
-                    <span className="label-text-alt text-red-500 font-bold">{formErrors.title}</span>
+                    <span className="label-text-alt text-red-500 font-bold">
+                      {formErrors.title}
+                    </span>
                   </label>
                 )}
               </div>
@@ -654,25 +858,31 @@ export default function ProjectTaskBoard() {
                   onBlur={handleBlur}
                   required
                   disabled={selectedTask?.status === "Completed"}
-                  className={`w-full bg-background border ${formErrors.assigned_member ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`w-full bg-background border ${formErrors.assigned_member ? "border-red-500 focus:border-red-500" : "border-card-border focus:border-primary"} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  <option value="" disabled>Select a user...</option>
-                  {users.map(u => (
-                    <option key={u.id || u._id} value={u.email}>
-                      {u.name ? `${u.name} (${u.email})` : u.email}
+                  <option value="" disabled>
+                    Select a user...
+                  </option>
+                  {(project?.members || []).map((email, idx) => (
+                    <option key={idx} value={email}>
+                      {email}
                     </option>
                   ))}
                 </select>
                 {formErrors.assigned_member && (
                   <label className="label pb-0">
-                    <span className="label-text-alt text-red-500 font-bold">{formErrors.assigned_member}</span>
+                    <span className="label-text-alt text-red-500 font-bold">
+                      {formErrors.assigned_member}
+                    </span>
                   </label>
                 )}
-                {selectedTask?.status === "Completed" && !formErrors.assigned_member && (
-                  <p className="text-[10px] text-red-400 mt-1 uppercase tracking-wider">
-                    Completed tasks cannot be reassigned. Change status to edit.
-                  </p>
-                )}
+                {selectedTask?.status === "Completed" &&
+                  !formErrors.assigned_member && (
+                    <p className="text-[10px] text-red-400 mt-1 uppercase tracking-wider">
+                      Completed tasks cannot be reassigned. Change status to
+                      edit.
+                    </p>
+                  )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -686,7 +896,7 @@ export default function ProjectTaskBoard() {
                     value={formData.due_date}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={new Date().toISOString().split("T")[0]}
                     onClick={(e) => {
                       try {
                         e.target.showPicker();
@@ -694,11 +904,13 @@ export default function ProjectTaskBoard() {
                         // ignore
                       }
                     }}
-                    className={`w-full bg-background border ${formErrors.due_date ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
+                    className={`w-full bg-background border ${formErrors.due_date ? "border-red-500 focus:border-red-500" : "border-card-border focus:border-primary"} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
                   />
                   {formErrors.due_date && (
                     <label className="label pb-0">
-                      <span className="label-text-alt text-red-500 font-bold">{formErrors.due_date}</span>
+                      <span className="label-text-alt text-red-500 font-bold">
+                        {formErrors.due_date}
+                      </span>
                     </label>
                   )}
                 </div>

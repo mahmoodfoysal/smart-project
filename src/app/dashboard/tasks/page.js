@@ -12,6 +12,11 @@ export default function MyTasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Details Modal State
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [projectDetails, setProjectDetails] = useState(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+
   useEffect(() => {
     fetchProjects();
   }, [user]);
@@ -48,6 +53,40 @@ export default function MyTasksPage() {
     } catch (err) {
       console.error("Error updating status:", err);
       showError("Update Failed", "Could not change task status.");
+    }
+  };
+
+  const handleOpenDetails = async (project) => {
+    setIsDetailsOpen(true);
+    setIsDetailsLoading(true);
+    setProjectDetails(null);
+    try {
+      const id = project._id || project.id || project.project_id;
+      const response = await apiClient.get(`/api/smart-project/get-project-details/${id}`);
+      if (response && response.data) {
+        const data = response.data.details_data || response.data.data || response.data;
+        setProjectDetails(Array.isArray(data) ? data[0] : data);
+      } else {
+        showError("Error", "Could not fetch project details.");
+      }
+    } catch (err) {
+      console.error(err);
+      showError("Error", "Failed to load project details.");
+    } finally {
+      setIsDetailsLoading(false);
+    }
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false);
+  };
+
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case "Active": return "bg-primary text-white border-primary";
+      case "Completed": return "bg-green-500 text-white border-green-500";
+      case "On Hold": return "bg-yellow-500 text-white border-yellow-500";
+      default: return "bg-background text-foreground border-card-border";
     }
   };
 
@@ -110,7 +149,7 @@ export default function MyTasksPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {todoTasks.length === 0 && <p className="text-xs text-text-muted font-semibold text-center mt-4">No pending tasks.</p>}
-            {todoTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} />)}
+            {todoTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} onProjectClick={handleOpenDetails} />)}
           </div>
         </div>
 
@@ -126,7 +165,7 @@ export default function MyTasksPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {inProgressTasks.length === 0 && <p className="text-xs text-text-muted font-semibold text-center mt-4">Nothing in progress.</p>}
-            {inProgressTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} />)}
+            {inProgressTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} onProjectClick={handleOpenDetails} />)}
           </div>
         </div>
 
@@ -142,17 +181,137 @@ export default function MyTasksPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {completedTasks.length === 0 && <p className="text-xs text-text-muted font-semibold text-center mt-4">No completed tasks.</p>}
-            {completedTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} />)}
+            {completedTasks.map(t => <TaskCard key={t.id || t._id} task={t} onStatusChange={handleStatusChange} onProjectClick={handleOpenDetails} />)}
           </div>
         </div>
 
       </div>
+
+      {/* Embedded Details Modal */}
+      {isDetailsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={handleCloseDetails} />
+          
+          <div className="bg-card-bg border border-card-border rounded-2xl shadow-2xl z-10 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+             <div className="p-6 border-b border-card-border flex justify-between items-center bg-card-bg/50">
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                   <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                   Project Details
+                </h2>
+                <button onClick={handleCloseDetails} className="text-text-muted hover:text-foreground p-1 rounded-lg hover:bg-background transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+             </div>
+             
+             <div className="p-6 overflow-y-auto">
+                {isDetailsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10">
+                     <span className="loading loading-spinner loading-lg text-primary mb-4"></span>
+                     <p className="text-xs font-bold text-text-muted uppercase tracking-wider">Loading details...</p>
+                  </div>
+                ) : projectDetails ? (
+                  <div className="space-y-5">
+                     <div>
+                       <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Project Name</p>
+                       <p className="text-sm font-bold text-foreground">{projectDetails.project_name}</p>
+                     </div>
+                     <div>
+                       <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Description</p>
+                       <p className="text-sm text-foreground bg-background p-3 rounded-xl border border-card-border">
+                         {projectDetails.description || "No description provided."}
+                       </p>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Status</p>
+                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${getStatusBadgeColor(projectDetails.status)} uppercase tracking-wider`}>
+                           {projectDetails.status || "Active"}
+                         </span>
+                       </div>
+                       <div>
+                         <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Deadline</p>
+                         <p className="text-sm font-bold text-foreground">
+                           {projectDetails.dead_line ? new Date(projectDetails.dead_line).toLocaleDateString() : "None"}
+                         </p>
+                       </div>
+                     </div>
+
+                     {/* Team Members */}
+                     {projectDetails.members && projectDetails.members.length > 0 && (
+                       <div>
+                         <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">Assigned Team Members</p>
+                         <div className="flex flex-wrap gap-2">
+                           {projectDetails.members.map((email, idx) => (
+                             <span key={idx} className="bg-primary/10 text-primary border border-primary/20 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                               {email.split('@')[0]}
+                             </span>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Tasks List */}
+                     <div className="pt-2 border-t border-card-border">
+                       <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">
+                         Project Tasks ({projectDetails.tasks?.length || 0})
+                       </p>
+                       {projectDetails.tasks && projectDetails.tasks.length > 0 ? (
+                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                           {projectDetails.tasks.map((task, idx) => (
+                             <div key={idx} className="bg-background border border-card-border p-3 rounded-xl flex justify-between items-start gap-4 hover:border-primary/50 transition-colors">
+                               <div>
+                                 <p className={`text-sm font-bold leading-snug mb-1 ${task.status === 'Completed' ? 'line-through text-text-muted' : 'text-foreground'}`}>
+                                   {task.title}
+                                 </p>
+                                 <div className="flex items-center gap-2">
+                                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === 'High' ? 'bg-red-500/10 text-red-500' : task.priority === 'Medium' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                      {task.priority}
+                                   </span>
+                                   {task.assigned_member && (
+                                     <span className="text-[10px] font-bold text-text-muted flex items-center gap-1">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                        {task.assigned_member.split('@')[0]}
+                                     </span>
+                                   )}
+                                 </div>
+                               </div>
+                               <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 px-2 py-1 rounded-md border ${task.status === 'Completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : task.status === 'In Progress' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' : 'bg-background text-text-muted border-card-border'}`}>
+                                 {task.status}
+                               </span>
+                             </div>
+                           ))}
+                         </div>
+                       ) : (
+                         <p className="text-xs text-text-muted italic bg-background p-3 rounded-xl border border-card-border text-center">No tasks added to this project yet.</p>
+                       )}
+                     </div>
+                  </div>
+                ) : (
+                  <div className="py-10 text-center text-red-500 font-bold text-sm">
+                    Failed to load details.
+                  </div>
+                )}
+             </div>
+             
+             <div className="p-4 border-t border-card-border bg-card-bg/50 flex justify-between items-center">
+                <Link href={`/dashboard/projects/${projectDetails?._id || projectDetails?.id || projectDetails?.project_id}`} className="px-5 py-2 rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold hover:bg-primary hover:text-white transition-colors">
+                  Open Kanban Board
+                </Link>
+                <button onClick={handleCloseDetails} className="px-5 py-2 rounded-xl border border-card-border text-xs font-bold text-text-muted hover:text-foreground hover:bg-background transition-colors">
+                   Close
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 // Mini Task Card Component
-function TaskCard({ task, onStatusChange }) {
+function TaskCard({ task, onStatusChange, onProjectClick }) {
   
   const isCompleted = task.status === "Completed";
   
@@ -169,9 +328,9 @@ function TaskCard({ task, onStatusChange }) {
 
       <div className="text-[10px] text-text-muted uppercase tracking-wider font-bold mb-4 flex items-center gap-1">
          <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-         <Link href={`/dashboard/projects/${task.parentProject.project_id || task.parentProject._id}`} className="hover:text-primary transition-colors hover:underline">
+         <button onClick={() => onProjectClick(task.parentProject)} className="hover:text-primary transition-colors hover:underline text-left">
             {task.parentProject.project_name}
-         </Link>
+         </button>
       </div>
       
       <div className="flex justify-between items-end mt-4 pt-4 border-t border-card-border">
