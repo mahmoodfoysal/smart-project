@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "Vue.volar",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "usernamehw.errorlens",
+        "gruntfuggly.todo-tree",
+        "PKief.material-icon-theme",
+        "EliverLara.andromeda",
+        "aaron-bond.better-comments",
+        "eamodio.gitlens"
+    ]
+}
