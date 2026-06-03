@@ -464,10 +464,10 @@ export default function ManageProjectsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-transparent text-foreground text-xs font-bold outline-none cursor-pointer"
             >
-              <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
-              <option value="On Hold">On Hold</option>
+              <option className="bg-background text-foreground" value="All">All Statuses</option>
+              <option className="bg-background text-foreground" value="Active">Active</option>
+              <option className="bg-background text-foreground" value="Completed">Completed</option>
+              <option className="bg-background text-foreground" value="On Hold">On Hold</option>
             </select>
           </div>
 
@@ -480,9 +480,9 @@ export default function ManageProjectsPage() {
               onChange={(e) => setTimeFilter(e.target.value)}
               className="bg-transparent text-foreground text-xs font-bold outline-none cursor-pointer"
             >
-              <option value="All">Any Time</option>
-              <option value="Upcoming">Due within 7 Days</option>
-              <option value="Overdue">Overdue</option>
+              <option className="bg-background text-foreground" value="All">Any Time</option>
+              <option className="bg-background text-foreground" value="Upcoming">Due within 7 Days</option>
+              <option className="bg-background text-foreground" value="Overdue">Overdue</option>
             </select>
           </div>
 
@@ -495,9 +495,9 @@ export default function ManageProjectsPage() {
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-transparent text-foreground text-xs font-bold outline-none cursor-pointer"
             >
-              <option value="Newest">Newest First</option>
-              <option value="Nearest Deadline">Nearest Deadline</option>
-              <option value="Name A-Z">Name A-Z</option>
+              <option className="bg-background text-foreground" value="Newest">Newest First</option>
+              <option className="bg-background text-foreground" value="Nearest Deadline">Nearest Deadline</option>
+              <option className="bg-background text-foreground" value="Name A-Z">Name A-Z</option>
             </select>
           </div>
         </div>

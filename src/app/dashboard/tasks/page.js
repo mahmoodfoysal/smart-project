@@ -362,7 +362,7 @@ function TaskCard({ task, onStatusChange, onProjectClick }) {
             className={`text-[10px] font-bold uppercase tracking-wider rounded-lg px-2 py-1 appearance-none border cursor-pointer focus:outline-none 
               ${isCompleted ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-background border-card-border text-foreground'}`}
          >
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map(s => <option key={s} value={s} className="bg-background text-foreground">{s}</option>)}
          </select>
       </div>
     </div>
