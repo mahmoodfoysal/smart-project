@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import apiClient from "@/utils/apiClient";
 import Link from "next/link";
+import { validateTaskSchema } from "@/lib/validations/taskSchema";
 import {
   showProcessing,
   showError,
@@ -25,7 +26,7 @@ export default function ProjectTaskBoard() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [formErrors, setFormErrors] = useState({});
 
   const [formData, setFormData] = useState({
     title: "",
@@ -38,6 +39,11 @@ export default function ProjectTaskBoard() {
 
   // Filter state for Kanban Board
   const [priorityFilter, setPriorityFilter] = useState("All");
+  const [memberFilter, setMemberFilter] = useState("All");
+
+  // Add Member State
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [selectedNewMember, setSelectedNewMember] = useState("");
 
   const fetchData = async () => {
     try {
@@ -54,9 +60,12 @@ export default function ProjectTaskBoard() {
         return;
       }
       
-      // Initialize tasks array if it doesn't exist
+      // Initialize tasks and members array if it doesn't exist
       if (!currentProject.tasks) {
         currentProject.tasks = [];
+      }
+      if (!currentProject.members) {
+        currentProject.members = [];
       }
       setProject(currentProject);
 
@@ -81,7 +90,7 @@ export default function ProjectTaskBoard() {
 
   // Drawer Handlers
   const handleOpenDrawer = (task = null) => {
-    setFormError("");
+    setFormErrors({});
     setSelectedTask(task);
     
     if (task) {
@@ -119,53 +128,17 @@ export default function ProjectTaskBoard() {
     setIsDrawerOpen(false);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formError) setFormError("");
+  const handleBlur = () => {
+    setFormErrors(validateTaskSchema(formData, project?.tasks || [], selectedTask));
   };
 
-  const validateTaskForm = () => {
-    if (!formData.title.trim()) {
-      setFormError("Task Title is required.");
-      return false;
-    }
-    if (!formData.assigned_member) {
-      setFormError("Assigned Member is required.");
-      return false;
-    }
-
-    // 1. No Duplicate Task Titles
-    const isDuplicate = project.tasks.some(
-      (t) =>
-        t.title.toLowerCase() === formData.title.toLowerCase() &&
-        (selectedTask ? (t.id || t._id) !== (selectedTask.id || selectedTask._id) : true)
-    );
-    if (isDuplicate) {
-      setFormError("This task already exists in the project.");
-      return false;
-    }
-
-    // 2. No Re-assigning Completed Tasks
-    if (selectedTask && selectedTask.status === "Completed" && formData.status === "Completed") {
-      if (formData.assigned_member !== selectedTask.assigned_member) {
-        setFormError("Completed tasks cannot be reassigned.");
-        return false;
-      }
-    }
-
-    // 3. No Past Deadlines
-    if (formData.due_date) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const selectedDate = new Date(formData.due_date);
-      if (selectedDate < today) {
-        setFormError("Please select a valid deadline (cannot be in the past).");
-        return false;
-      }
-    }
-
-    return true;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      setFormErrors(validateTaskSchema(updated, project?.tasks || [], selectedTask));
+      return updated;
+    });
   };
 
   const generateTaskId = () => {
@@ -200,7 +173,12 @@ export default function ProjectTaskBoard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateTaskForm()) return;
+    const errors = validateTaskSchema(formData, project?.tasks || [], selectedTask);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      showError("Validation Error", "Please fix the highlighted errors before submitting.");
+      return;
+    }
 
     showProcessing("Saving Task...", "Please wait.");
 
@@ -265,6 +243,25 @@ export default function ProjectTaskBoard() {
     await saveProject(updatedProject, `Task moved to ${newStatus}`);
   };
 
+  const handleAddMember = async () => {
+    if (!selectedNewMember) return;
+    if ((project.members || []).includes(selectedNewMember)) {
+      showError("Already Added", "This member is already in the project.");
+      return;
+    }
+    const updatedMembers = [...(project.members || []), selectedNewMember];
+    const updatedProject = { ...project, members: updatedMembers };
+    showProcessing("Adding Member...", "Please wait.");
+    const success = await saveProject(updatedProject, "Member added successfully.");
+    if (success) {
+      setIsAddMemberOpen(false);
+      setSelectedNewMember("");
+    }
+  };
+
+  // Derive form validity to dynamically lock the Submit button
+  const isFormValid = Object.keys(validateTaskSchema(formData, project?.tasks || [], selectedTask)).length === 0;
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -293,8 +290,9 @@ export default function ProjectTaskBoard() {
   }
 
   const filteredTasks = (project.tasks || []).filter((t) => {
-    if (priorityFilter === "All") return true;
-    return t.priority === priorityFilter;
+    if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
+    if (memberFilter !== "All" && t.assigned_member !== memberFilter) return false;
+    return true;
   });
 
   const todoTasks = filteredTasks.filter((t) => t.status === "Todo");
@@ -404,6 +402,18 @@ export default function ProjectTaskBoard() {
 
         <div className="flex gap-3 items-center">
           <select
+            value={memberFilter}
+            onChange={(e) => setMemberFilter(e.target.value)}
+            className="bg-card-bg border border-card-border text-foreground text-xs font-bold uppercase tracking-wider rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary appearance-none"
+          >
+            <option value="All">All Members</option>
+            {(project.members || []).map(email => {
+              const u = users.find(user => user.email === email) || { name: email };
+              return <option key={email} value={email}>{u.name || email}</option>;
+            })}
+          </select>
+
+          <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="bg-card-bg border border-card-border text-foreground text-xs font-bold uppercase tracking-wider rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary appearance-none"
@@ -421,6 +431,75 @@ export default function ProjectTaskBoard() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
             Add Task
           </button>
+        </div>
+      </div>
+
+      {/* Team Collaboration Workload Summary */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
+             Team Workload
+          </h2>
+          <div>
+            {isAddMemberOpen ? (
+              <div className="flex gap-2 items-center">
+                <select
+                  value={selectedNewMember}
+                  onChange={(e) => setSelectedNewMember(e.target.value)}
+                  className="bg-background border border-card-border text-xs font-bold text-foreground rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary"
+                >
+                  <option value="" disabled>Select User...</option>
+                  {users.filter(u => !(project.members || []).includes(u.email)).map(u => (
+                    <option key={u.id || u._id} value={u.email}>{u.name || u.email}</option>
+                  ))}
+                </select>
+                <button onClick={handleAddMember} className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-hover">Add</button>
+                <button onClick={() => setIsAddMemberOpen(false)} className="bg-card-bg text-text-muted px-3 py-1.5 rounded-lg text-xs font-bold border border-card-border hover:bg-background">Cancel</button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsAddMemberOpen(true)}
+                className="text-primary hover:text-primary-hover text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                Add Member
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {(project.members || []).length === 0 && (
+             <div className="col-span-full p-6 border-2 border-dashed border-card-border rounded-xl text-center">
+                <p className="text-xs font-bold uppercase text-text-muted tracking-wider">No team members assigned yet.</p>
+             </div>
+          )}
+          {(project.members || []).map(memberEmail => {
+             const user = users.find(u => u.email === memberEmail) || { name: memberEmail, email: memberEmail };
+             const memberTasks = (project.tasks || []).filter(t => t.assigned_member === memberEmail);
+             const completed = memberTasks.filter(t => t.status === "Completed").length;
+             const total = memberTasks.length;
+             const pending = total - completed;
+
+             return (
+               <div key={memberEmail} className="bg-card-bg border border-card-border shadow-sm rounded-2xl p-4 flex items-center gap-4">
+                 <div className="avatar placeholder">
+                   <div className="bg-background text-foreground rounded-full w-12 border-2 border-primary shadow-sm flex items-center justify-center">
+                     <span className="text-sm font-black uppercase">{(user.name || user.email).substring(0, 2)}</span>
+                   </div>
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <h3 className="text-sm font-bold text-foreground truncate">{user.name}</h3>
+                   <p className="text-[10px] text-text-muted truncate mb-2">{user.email}</p>
+                   <div className="flex gap-1.5">
+                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-background border border-card-border text-foreground" title="Total Tasks">T: {total}</span>
+                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20" title="Completed Tasks">D: {completed}</span>
+                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20" title="Pending Tasks">P: {pending}</span>
+                   </div>
+                 </div>
+               </div>
+             )
+          })}
         </div>
       </div>
 
@@ -523,9 +602,9 @@ export default function ProjectTaskBoard() {
 
           <div className="flex-1 overflow-y-auto p-6">
             <form id="task-form" onSubmit={handleSubmit} className="space-y-5">
-              {formError && (
+              {Object.keys(formErrors).length > 0 && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold tracking-wide">
-                  {formError}
+                  Please fix the highlighted errors.
                 </div>
               )}
 
@@ -538,10 +617,16 @@ export default function ProjectTaskBoard() {
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
-                  className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                  className={`w-full bg-background border ${formErrors.title ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
                   placeholder="e.g. Design Landing Page"
                 />
+                {formErrors.title && (
+                  <label className="label pb-0">
+                    <span className="label-text-alt text-red-500 font-bold">{formErrors.title}</span>
+                  </label>
+                )}
               </div>
 
               <div>
@@ -566,9 +651,10 @@ export default function ProjectTaskBoard() {
                   name="assigned_member"
                   value={formData.assigned_member}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   disabled={selectedTask?.status === "Completed"}
-                  className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full bg-background border ${formErrors.assigned_member ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <option value="" disabled>Select a user...</option>
                   {users.map(u => (
@@ -577,7 +663,12 @@ export default function ProjectTaskBoard() {
                     </option>
                   ))}
                 </select>
-                {selectedTask?.status === "Completed" && (
+                {formErrors.assigned_member && (
+                  <label className="label pb-0">
+                    <span className="label-text-alt text-red-500 font-bold">{formErrors.assigned_member}</span>
+                  </label>
+                )}
+                {selectedTask?.status === "Completed" && !formErrors.assigned_member && (
                   <p className="text-[10px] text-red-400 mt-1 uppercase tracking-wider">
                     Completed tasks cannot be reassigned. Change status to edit.
                   </p>
@@ -594,6 +685,8 @@ export default function ProjectTaskBoard() {
                     name="due_date"
                     value={formData.due_date}
                     onChange={handleChange}
+                    onBlur={handleBlur}
+                    min={new Date().toISOString().split('T')[0]}
                     onClick={(e) => {
                       try {
                         e.target.showPicker();
@@ -601,8 +694,13 @@ export default function ProjectTaskBoard() {
                         // ignore
                       }
                     }}
-                    className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                    className={`w-full bg-background border ${formErrors.due_date ? 'border-red-500 focus:border-red-500' : 'border-card-border focus:border-primary'} rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none transition-colors`}
                   />
+                  {formErrors.due_date && (
+                    <label className="label pb-0">
+                      <span className="label-text-alt text-red-500 font-bold">{formErrors.due_date}</span>
+                    </label>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
@@ -651,8 +749,8 @@ export default function ProjectTaskBoard() {
               <button
                 type="submit"
                 form="task-form"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:bg-primary-hover transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                disabled={!isFormValid || isSubmitting}
+                className="flex-1 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? "Saving..." : "Save Task"}
               </button>

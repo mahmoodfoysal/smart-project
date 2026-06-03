@@ -30,6 +30,7 @@ export default function ManageAdminPage() {
   const currentUser = useSelector((state) => state.auth.user);
 
   const [formData, setFormData] = useState({
+    full_name: "",
     email: "",
     role_id: 200,
   });
@@ -47,11 +48,13 @@ export default function ManageAdminPage() {
   useEffect(() => {
     if (selectedUser) {
       setFormData({
+        full_name: selectedUser.full_name || selectedUser.name || "",
         email: selectedUser.email || "",
         role_id: selectedUser.role_id ? Number(selectedUser.role_id) : 200,
       });
     } else {
       setFormData({
+        full_name: "",
         email: "",
         role_id: 200,
       });
@@ -85,6 +88,7 @@ export default function ManageAdminPage() {
 
     try {
       const payload = {
+        full_name: formData.full_name,
         email: formData.email,
         role: ROLE_MAP[formData.role_id],
         role_id: formData.role_id,
@@ -476,7 +480,22 @@ export default function ManageAdminPage() {
             >
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                  Email Address
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"

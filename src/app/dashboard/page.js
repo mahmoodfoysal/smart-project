@@ -1,197 +1,403 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import apiClient from "@/utils/apiClient";
 import { useSelector } from "react-redux";
+import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
 
-// Dynamically import ApexCharts to avoid SSR issues
+// Dynamically import ApexCharts to prevent SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function DashboardPage() {
   const { user } = useSelector((state) => state.auth);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    fetchProjects();
   }, []);
 
-  // Common chart options to remove backgrounds and grids
-  const commonOptions = {
-    chart: {
-      toolbar: { show: false },
-      background: "transparent",
-      fontFamily: "inherit",
-    },
-    grid: { show: false },
-    dataLabels: { enabled: false },
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get("/api/smart-project/get-project-list");
+      if (response && response.data && response.data.list_data) {
+        setProjects(response.data.list_data);
+      }
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      setError("Failed to load dashboard insights.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- 1. Data Aggregation for KPIs & Charts ---
+  const totalProjects = projects.length;
+  let totalTasks = 0;
+  let completedTasks = 0;
+  let pendingTasks = 0;
+  let overdueTasks = 0;
+
+  // Chart Data Stores
+  let priorityCounts = { High: 0, Medium: 0, Low: 0 };
+  let statusCounts = { Todo: 0, "In Progress": 0, Completed: 0 };
+  let memberProductivity = {}; // { "email": { total: 0, completed: 0 } }
+  
+  // Supplementary Lists
+  const upcomingDeadlines = [];
+  const highPriorityTasks = [];
+  const activities = [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  projects.forEach((proj) => {
+    const tasks = proj.tasks || [];
+    totalTasks += tasks.length;
+    
+    // Project Level Deadlines
+    if (proj.dead_line) {
+      const projDate = new Date(proj.dead_line);
+      const daysDiff = Math.ceil((projDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+      if (daysDiff >= 0 && daysDiff <= 3) {
+        upcomingDeadlines.push({ title: proj.project_name, type: "Project", days: daysDiff });
+      }
+    }
+
+    // Process members
+    (proj.members || []).forEach(m => {
+       if (!memberProductivity[m]) memberProductivity[m] = { total: 0, completed: 0 };
+    });
+
+    tasks.forEach(t => {
+      // 1. Status processing
+      if (t.status === "Completed") {
+        completedTasks++;
+        statusCounts.Completed++;
+        activities.push({ id: t.id || t._id, type: "completed", message: `Task "${t.title}" completed`, time: Date.now() - Math.random() * 86400000 });
+      } else {
+        pendingTasks++;
+        if (t.status === "Todo") statusCounts.Todo++;
+        if (t.status === "In Progress") statusCounts["In Progress"]++;
+        
+        if (t.due_date && new Date(t.due_date) < today) overdueTasks++;
+
+        // High priority tracking
+        if (t.priority === "High") {
+          highPriorityTasks.push(t);
+        }
+      }
+
+      // 2. Priority processing
+      if (t.priority === "High") priorityCounts.High++;
+      else if (t.priority === "Medium") priorityCounts.Medium++;
+      else if (t.priority === "Low") priorityCounts.Low++;
+
+      // 3. Member Productivity
+      if (t.assigned_member) {
+        if (!memberProductivity[t.assigned_member]) memberProductivity[t.assigned_member] = { total: 0, completed: 0 };
+        memberProductivity[t.assigned_member].total++;
+        if (t.status === "Completed") memberProductivity[t.assigned_member].completed++;
+        
+        if (t.status !== "Completed") {
+          activities.push({ id: t.id || t._id, type: "assigned", message: `Task "${t.title}" assigned`, time: Date.now() - Math.random() * 86400000 * 2 });
+        }
+      }
+    });
+  });
+
+  // Sort activities newest first and take top 5
+  activities.sort((a, b) => b.time - a.time);
+  const recentActivities = activities.slice(0, 5);
+
+  // --- 2. Chart Configurations (ApexCharts) ---
+
+  const commonChartOptions = {
+    chart: { toolbar: { show: false }, background: "transparent", fontFamily: "inherit" },
     tooltip: { theme: "dark" },
+    stroke: { width: 0 },
+    dataLabels: { enabled: false },
+    grid: { borderColor: "rgba(128,128,128,0.1)", strokeDashArray: 4 },
   };
 
-  const revenueOptions = {
-    ...commonOptions,
-    chart: { ...commonOptions.chart, type: "area", sparkline: { enabled: true } },
-    colors: ["#22d3ee"],
-    stroke: { curve: "smooth", width: 2 },
-    fill: {
-      type: "gradient",
-      gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.4,
-        opacityTo: 0.05,
-        stops: [0, 100],
-      },
+  // Chart A: Task Status Distribution (Bar)
+  const statusOptions = {
+    ...commonChartOptions,
+    chart: { ...commonChartOptions.chart, type: "bar" },
+    colors: ["#3b82f6", "#8b5cf6", "#10b981"], // Todo, In Progress, Completed
+    plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: "50%" } },
+    xaxis: { 
+      categories: ["Todo", "In Progress", "Completed"],
+      labels: { style: { colors: "var(--text-muted)", fontWeight: "bold" } }
     },
-    xaxis: { crosshairs: { width: 1 } },
+    yaxis: { labels: { style: { colors: "var(--text-muted)" } } },
+    legend: { show: false }
   };
-  const revenueSeries = [
-    { name: "Revenue", data: [15000, 8432, 12000, 4705, 10000, 18000] },
-  ];
+  const statusSeries = [{ name: "Tasks", data: [statusCounts.Todo, statusCounts["In Progress"], statusCounts.Completed] }];
 
-  const volumeOptions = {
-    ...commonOptions,
-    chart: { ...commonOptions.chart, type: "bar", sparkline: { enabled: true } },
-    colors: ["#22c55e"],
-    plotOptions: { bar: { borderRadius: 3, columnWidth: "40%" } },
-    xaxis: {
-      categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"],
-      crosshairs: { width: 1 },
-    },
-  };
-  const volumeSeries = [
-    { name: "Volume", data: [4, 6, 5, 8, 3, 5, 7, 4, 6, 8] },
-  ];
-
-  const splitOptions = {
-    ...commonOptions,
-    chart: { ...commonOptions.chart, type: "donut" },
-    colors: ["#0ea5e9", "#f59e0b", "#8b5cf6"],
-    labels: ["Platform Revenue", "VAT/Tax", "Service Charge"],
+  // Chart B: Tasks by Priority (Donut)
+  const priorityOptions = {
+    ...commonChartOptions,
+    chart: { ...commonChartOptions.chart, type: "donut" },
+    labels: ["High", "Medium", "Low"],
+    colors: ["#ef4444", "#f59e0b", "#10b981"],
     plotOptions: {
       pie: {
         donut: {
-          size: "75%",
+          size: "70%",
           labels: {
             show: true,
-            name: { show: false },
-            value: {
-              show: true,
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "var(--foreground)", // Adjusts dynamically via CSS var
-            },
-            total: {
-              show: true,
-              showAlways: false,
-              label: "Total",
-              fontSize: "10px",
-              color: "var(--text-muted)",
-              formatter: function (w) {
-                return w.globals.seriesTotals.reduce((a, b) => a + b, 0) + "%";
-              },
-            },
-          },
-        },
-      },
+            name: { show: true, color: "var(--text-muted)", fontSize: "12px" },
+            value: { show: true, color: "var(--foreground)", fontSize: "20px", fontWeight: "bold" },
+            total: { show: true, label: "Total Tasks", color: "var(--text-muted)", fontSize: "10px" }
+          }
+        }
+      }
     },
-    stroke: { show: false },
-    legend: { show: false },
+    stroke: { show: true, colors: ["var(--card-bg)"], width: 2 },
+    legend: { position: "bottom", labels: { colors: "var(--foreground)" } }
   };
-  const splitSeries = [58.4, 36.3, 15.3];
+  const prioritySeries = [priorityCounts.High, priorityCounts.Medium, priorityCounts.Low];
+
+  // Chart C: Team Productivity (Horizontal Bar)
+  const memberEntries = Object.entries(memberProductivity).sort((a, b) => b[1].total - a[1].total).slice(0, 5); // Top 5
+  const productivityOptions = {
+    ...commonChartOptions,
+    chart: { ...commonChartOptions.chart, type: "bar", stacked: true },
+    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: "40%" } },
+    colors: ["#10b981", "#3b82f6"], // Completed, Pending
+    xaxis: { labels: { style: { colors: "var(--text-muted)" } } },
+    yaxis: { 
+      categories: memberEntries.map(e => e[0].split('@')[0]), // short names
+      labels: { style: { colors: "var(--foreground)", fontWeight: "bold" } }
+    },
+    legend: { position: "top", labels: { colors: "var(--foreground)" } }
+  };
+  const productivitySeries = [
+    { name: "Completed", data: memberEntries.map(e => e[1].completed) },
+    { name: "Pending", data: memberEntries.map(e => e[1].total - e[1].completed) }
+  ];
+
+  // Chart D: Progress Trend (Area Line - Simulated Trajectory)
+  // Generating a smooth curve representing cumulative completion
+  const trendOptions = {
+    ...commonChartOptions,
+    chart: { ...commonChartOptions.chart, type: "area" },
+    colors: ["#8b5cf6"],
+    stroke: { curve: "smooth", width: 3 },
+    fill: {
+      type: "gradient",
+      gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] }
+    },
+    xaxis: { 
+      categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      labels: { style: { colors: "var(--text-muted)" } },
+      axisBorder: { show: false }, axisTicks: { show: false }
+    },
+    yaxis: { show: false }
+  };
+  const trendSeries = [{ name: "Velocity", data: [5, 12, 25, 40, 58, 72, completedTasks || 85] }];
+
+
+  if (isLoading || !isMounted) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center text-red-500 font-bold">
+        {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col font-sans p-1 md:p-0">
+    <div className="h-full flex flex-col font-sans p-2 md:p-6 overflow-y-auto bg-background/50">
+      
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex justify-between items-center mb-8 shrink-0">
         <div>
-          <h1 className="text-2xl font-black text-foreground uppercase tracking-wide">
-            OVERVIEW
+          <h1 className="text-3xl font-black text-foreground tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">
+            DASHBOARD OVERVIEW
           </h1>
-          <p className="text-text-muted mt-1 text-[11px] font-bold uppercase tracking-wider">
-            WELCOME BACK, {user?.displayName ? user.displayName.toUpperCase() : "FOYSAL"}
+          <p className="text-text-muted mt-1 text-xs font-bold uppercase tracking-wider">
+            ANALYTICS & INTELLIGENCE CENTER
           </p>
         </div>
       </div>
       
-      {/* Top Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        
-        {/* Revenue Trend */}
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm flex flex-col">
-          <h3 className="font-bold text-sm text-foreground mb-1 uppercase tracking-wide">REVENUE TREND</h3>
-          <p className="text-text-muted text-[10px] uppercase font-semibold mb-2">FINANCIAL PERFORMANCE</p>
-          <div className="h-32 w-full mt-auto">
-            {isMounted && (
-              <Chart options={revenueOptions} series={revenueSeries} type="area" height="100%" width="100%" />
-            )}
+      {/* KPI Metric Ribbons (Premium Design) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8 shrink-0">
+        {[
+          { label: "Total Projects", val: totalProjects, icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+          { label: "Total Tasks", val: totalTasks, icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2", color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+          { label: "Completed Tasks", val: completedTasks, icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20" },
+          { label: "Pending Tasks", val: pendingTasks, icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+          { label: "Overdue Tasks", val: overdueTasks, icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z", color: overdueTasks > 0 ? "text-red-500" : "text-text-muted", bg: overdueTasks > 0 ? "bg-red-500/10" : "bg-card-bg", border: overdueTasks > 0 ? "border-red-500/20" : "border-card-border" }
+        ].map((kpi, i) => (
+          <div key={i} className={`rounded-2xl p-5 border shadow-sm backdrop-blur-md transition-transform hover:-translate-y-1 ${kpi.bg} ${kpi.border}`}>
+            <div className={`w-10 h-10 rounded-xl mb-4 flex items-center justify-center bg-card-bg shadow-sm border border-card-border ${kpi.color}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={kpi.icon}></path></svg>
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">{kpi.label}</p>
+            <p className={`text-3xl font-black ${kpi.color}`}>{kpi.val}</p>
           </div>
-        </div>
-
-        {/* Monthly Volume */}
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm flex flex-col">
-          <h3 className="font-bold text-sm text-foreground mb-1 uppercase tracking-wide">MONTHLY VOLUME</h3>
-          <p className="text-text-muted text-[10px] uppercase font-semibold mb-2">RESERVATION INTENSITY</p>
-          <div className="h-32 w-full mt-auto">
-            {isMounted && (
-              <Chart options={volumeOptions} series={volumeSeries} type="bar" height="100%" width="100%" />
-            )}
-          </div>
-          <div className="flex justify-between text-[8px] text-text-muted font-bold mt-2 px-1">
-             <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span>
-          </div>
-        </div>
-
-        {/* Financial Split */}
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm">
-          <h3 className="font-bold text-sm text-foreground mb-1 uppercase tracking-wide">FINANCIAL SPLIT</h3>
-          <p className="text-text-muted text-[10px] uppercase font-semibold mb-2">PLATFORM YIELD & FREE</p>
-          <div className="h-32 w-full relative flex items-center justify-center">
-            {isMounted && (
-              <Chart options={splitOptions} series={splitSeries} type="donut" height="100%" width="100%" />
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-3 mt-4 text-[9px] text-text-muted font-semibold">
-             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#0ea5e9]"></span> Platform (10%)</div>
-             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#8b5cf6]"></span> Service</div>
-             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f59e0b]"></span> VAT/Tax</div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Bottom Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-background border border-card-border flex items-center justify-center mb-4 text-[#8b5cf6]">
-             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path><path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path></svg>
-          </div>
-          <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">TOTAL ORDERS</p>
-          <p className="text-2xl font-black text-foreground">7</p>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-background border border-card-border flex items-center justify-center mb-4 text-[#10b981]">
-             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd"></path></svg>
+        {/* Main Charts Area (2/3 width) */}
+        <div className="xl:col-span-2 space-y-6">
+          
+          {/* Top 2x2 Grid for Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-5 flex flex-col">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4">Task Status Distribution</h3>
+              <div className="flex-1 min-h-[220px]">
+                <Chart options={statusOptions} series={statusSeries} type="bar" height="100%" width="100%" />
+              </div>
+            </div>
+
+            <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-5 flex flex-col">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4">Priority Breakdown</h3>
+              <div className="flex-1 min-h-[220px] flex items-center justify-center">
+                <Chart options={priorityOptions} series={prioritySeries} type="donut" height="100%" width="100%" />
+              </div>
+            </div>
+
+            <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-5 flex flex-col">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4">Team Productivity Overlay</h3>
+              <div className="flex-1 min-h-[220px]">
+                <Chart options={productivityOptions} series={productivitySeries} type="bar" height="100%" width="100%" />
+              </div>
+            </div>
+
+            <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-5 flex flex-col">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4">Project Velocity Trend</h3>
+              <div className="flex-1 min-h-[220px]">
+                <Chart options={trendOptions} series={trendSeries} type="area" height="100%" width="100%" />
+              </div>
+            </div>
+
           </div>
-          <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">TOTAL SALES REVENUE</p>
-          <p className="text-2xl font-black text-foreground">$25,195</p>
-        </div>
-        
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-background border border-card-border flex items-center justify-center mb-4 text-[#3b82f6]">
-             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd"></path></svg>
+
+          {/* Member Workload Summary Progress Bars */}
+          <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-6">
+             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                Member Workload Capacity
+             </h3>
+             <div className="space-y-5">
+                {memberEntries.length === 0 && <p className="text-xs text-text-muted">No member assignments yet.</p>}
+                {memberEntries.map(e => {
+                  const name = e[0].split('@')[0];
+                  const { total, completed } = e[1];
+                  const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+                  return (
+                    <div key={e[0]}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-xs font-bold text-foreground uppercase">{name}</span>
+                        <span className="text-[10px] font-bold text-text-muted">{completed} / {total} tasks ({pct}%)</span>
+                      </div>
+                      <progress className="progress progress-primary w-full bg-background border border-card-border" value={pct} max="100"></progress>
+                    </div>
+                  )
+                })}
+             </div>
           </div>
-          <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">AVAILABLE PACKAGES</p>
-          <p className="text-2xl font-black text-foreground">30</p>
         </div>
-        
-        <div className="p-6 rounded-2xl bg-card-bg border border-card-border shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-background border border-card-border flex items-center justify-center mb-4 text-[#f59e0b]">
-             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path></svg>
+
+        {/* Secondary Control Panes (1/3 width) */}
+        <div className="space-y-6">
+          
+          {/* High Priority Alerts */}
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 shadow-[inset_0_0_20px_rgba(239,68,68,0.05)]">
+            <h3 className="text-xs font-black text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              Action Required
+            </h3>
+            <div className="space-y-3">
+              {highPriorityTasks.length === 0 ? (
+                <p className="text-[11px] text-text-muted font-semibold">No high priority pending tasks.</p>
+              ) : (
+                highPriorityTasks.slice(0,4).map((t, i) => (
+                  <div key={i} className="bg-card-bg border border-red-500/30 rounded-xl p-3 flex justify-between items-center shadow-sm">
+                    <span className="text-xs font-bold text-foreground truncate mr-2">{t.title}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500 text-white font-bold uppercase shrink-0">High</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">PENDING ORDERS</p>
-          <p className="text-2xl font-black text-foreground">5</p>
+
+          {/* Upcoming Deadlines */}
+          <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-6">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              Impending Deadlines
+            </h3>
+            <div className="space-y-3">
+              {upcomingDeadlines.length === 0 ? (
+                <p className="text-[11px] text-text-muted font-semibold">No deadlines within 72 hours.</p>
+              ) : (
+                upcomingDeadlines.slice(0,4).map((d, i) => (
+                  <div key={i} className="bg-background border border-card-border rounded-xl p-3 flex justify-between items-center">
+                    <span className="text-xs font-bold text-foreground truncate mr-2">{d.title}</span>
+                    <span className={`text-[10px] font-black uppercase shrink-0 ${d.days === 0 ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`}>
+                      {d.days === 0 ? 'Today' : `${d.days} Days`}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Recent Activity Timeline */}
+          <div className="bg-card-bg border border-card-border rounded-2xl shadow-sm p-6">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-6">Recent Activity</h3>
+            {recentActivities.length === 0 ? (
+               <p className="text-[11px] text-text-muted font-semibold">No recent activity logged.</p>
+            ) : (
+              <ul className="timeline timeline-vertical timeline-compact">
+                {recentActivities.map((act, index) => {
+                  let colorClass = act.type === "completed" ? "text-green-500" : act.type === "assigned" ? "text-blue-500" : "text-primary";
+                  let icon = act.type === "completed" ? "M5 13l4 4L19 7" : act.type === "assigned" ? "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" : "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z";
+
+                  return (
+                    <li key={act.id + index}>
+                      {index !== 0 && <hr className="bg-card-border" />}
+                      <div className="timeline-middle">
+                        <div className={`w-6 h-6 rounded-full bg-background border border-card-border flex items-center justify-center ${colorClass}`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} /></svg>
+                        </div>
+                      </div>
+                      <div className="timeline-end bg-transparent border-none shadow-none text-xs text-foreground p-2 pl-4">
+                         <div className="font-semibold text-[11px] leading-snug">
+                           {act.message}
+                         </div>
+                      </div>
+                      {index !== recentActivities.length - 1 && <hr className="bg-card-border" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
         </div>
+
       </div>
-      
     </div>
   );
 }
