@@ -7,14 +7,14 @@ import axios from "axios";
 import Link from "next/link";
 import Forbidden from "@/components/pages/Forbidden";
 
-const AdminRoute = ({ children }) => {
+const ManagerRoute = ({ children }) => {
   const { user, loading } = useSelector((state) => state.auth);
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
-    const verifyAdmin = async () => {
+    const verifyAccess = async () => {
       if (!loading && !user) {
         router.push("/login");
         return;
@@ -35,12 +35,12 @@ const AdminRoute = ({ children }) => {
           if (
             userData &&
             userData.email === user.email &&
-            userData.role_id === 200
+            (userData.role_id === 200 || userData.role_id === 201) // Admin (200) can access all routes, Manager (201)
           ) {
-            setIsAdmin(true);
+            setIsAuthorized(true);
           }
         } catch (error) {
-          console.error("Admin verification failed:", error);
+          console.error("Verification failed:", error);
         } finally {
           setIsVerifying(false);
         }
@@ -49,7 +49,7 @@ const AdminRoute = ({ children }) => {
       }
     };
 
-    verifyAdmin();
+    verifyAccess();
   }, [user, loading, router]);
 
   if (loading || isVerifying) {
@@ -60,11 +60,11 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAuthorized) {
     return <Forbidden></Forbidden>;
   }
 
   return <>{children}</>;
 };
 
-export default AdminRoute;
+export default ManagerRoute;

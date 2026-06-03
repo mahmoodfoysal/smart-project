@@ -5,6 +5,7 @@ import apiClient from "@/utils/apiClient";
 import { useSelector } from "react-redux";
 import Link from "next/link";
 import { showError, showProcessing, showSuccess } from "@/components/pages/Alert";
+import MemberRoute from "@/routes/MemberRoute";
 
 export default function MyTasksPage() {
   const { user } = useSelector((state) => state.auth);
@@ -115,6 +116,7 @@ export default function MyTasksPage() {
   }
 
   return (
+    <MemberRoute>
     <div className="h-full flex flex-col font-sans p-2 md:p-6 overflow-y-auto bg-background/50">
       <div className="flex justify-between items-end mb-8 shrink-0">
         <div>
@@ -307,6 +309,7 @@ export default function MyTasksPage() {
       )}
 
     </div>
+    </MemberRoute>
   );
 }
 

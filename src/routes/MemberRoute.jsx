@@ -7,10 +7,10 @@ import axios from "axios";
 import Link from "next/link";
 import Forbidden from "@/components/pages/Forbidden";
 
-const AdminRoute = ({ children }) => {
+const MemberRoute = ({ children }) => {
   const { user, loading } = useSelector((state) => state.auth);
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isMember, setIsMember] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
@@ -35,9 +35,11 @@ const AdminRoute = ({ children }) => {
           if (
             userData &&
             userData.email === user.email &&
-            userData.role_id === 200
+            (userData.role_id === 202 ||
+              userData.role_id === 201 ||
+              userData.role_id === 200)
           ) {
-            setIsAdmin(true);
+            setIsMember(true);
           }
         } catch (error) {
           console.error("Admin verification failed:", error);
@@ -60,11 +62,11 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isMember) {
     return <Forbidden></Forbidden>;
   }
 
   return <>{children}</>;
 };
 
-export default AdminRoute;
+export default MemberRoute;

@@ -9,6 +9,7 @@ import {
   showSuccess,
   showConfirmation,
 } from "@/components/pages/Alert";
+import ManagerRoute from "@/routes/ManagerRoute";
 
 export default function ManageProjectsPage() {
   const [projects, setProjects] = useState([]);
@@ -371,6 +372,7 @@ export default function ManageProjectsPage() {
   };
 
   return (
+    <ManagerRoute>
     <div className="h-full flex flex-col font-sans p-2 md:p-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 shrink-0">
@@ -1183,5 +1185,6 @@ export default function ManageProjectsPage() {
         </div>
       </div>
     </div>
+    </ManagerRoute>
   );
 }
