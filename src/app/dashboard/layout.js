@@ -112,7 +112,7 @@ export default function DashboardLayout({ children }) {
 
         {/* Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 md:relative transform transition-all duration-300 ease-in-out flex-shrink-0 bg-card-bg border-r border-card-border flex flex-col 
+          className={`fixed inset-y-0 left-0 z-50 md:relative md:z-[60] transform transition-all duration-300 ease-in-out flex-shrink-0 bg-card-bg border-r border-card-border flex flex-col 
           ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} 
           ${isSidebarCollapsed ? "md:w-[88px] w-[280px]" : "w-[280px]"}`}
         >
@@ -158,7 +158,7 @@ export default function DashboardLayout({ children }) {
           {/* Collapse Toggle Button (Floating - Desktop Only) */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="hidden md:flex absolute -right-3 top-8 w-6 h-6 bg-primary rounded-full items-center justify-center cursor-pointer text-white shadow-lg hover:bg-primary-hover transition-colors z-30"
+            className="hidden md:flex absolute -right-3 top-8 w-6 h-6 bg-primary rounded-full items-center justify-center cursor-pointer text-white shadow-lg hover:bg-primary-hover transition-colors z-40"
           >
             <svg
               className={`w-3 h-3 transition-transform duration-300 ${isSidebarCollapsed ? "rotate-180" : ""}`}

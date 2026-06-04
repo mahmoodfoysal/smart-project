@@ -23,7 +23,7 @@ const ManagerRoute = ({ children }) => {
       if (user && user.email) {
         try {
           const res = await axios.get(
-            `http://localhost:5000/api/admin/get-admin-list/${user.email}`,
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}api/admin/get-admin-list/${user.email}`,
           );
           const fetchedData = res.data?.list_data || res.data?.data || res.data;
 
