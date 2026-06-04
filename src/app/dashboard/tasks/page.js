@@ -257,7 +257,7 @@ export default function MyTasksPage() {
               onClick={handleCloseDetails}
             />
 
-            <div className="bg-card-bg border border-card-border rounded-2xl shadow-2xl z-10 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-card-bg border border-card-border rounded-2xl shadow-2xl z-10 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="p-6 border-b border-card-border flex justify-between items-center bg-card-bg/50">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <svg
@@ -391,45 +391,79 @@ export default function MyTasksPage() {
                           {projectDetails.tasks.map((task, idx) => (
                             <div
                               key={idx}
-                              className="bg-background border border-card-border p-3 rounded-xl flex justify-between items-start gap-4 hover:border-primary/50 transition-colors"
+                              className="bg-background border border-card-border p-3 rounded-xl flex flex-col gap-3 hover:border-primary/50 transition-colors"
                             >
-                              <div>
-                                <p
-                                  className={`text-sm font-bold leading-snug mb-1 ${task.status === "Completed" ? "line-through text-text-muted" : "text-foreground"}`}
-                                >
-                                  {task.title}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === "High" ? "bg-red-500/10 text-red-500" : task.priority === "Medium" ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500"}`}
+                              <div className="flex justify-between items-start gap-4">
+                                <div>
+                                  <p
+                                    className={`text-sm font-bold leading-snug mb-1 ${task.status === "Completed" ? "line-through text-text-muted" : "text-foreground"}`}
                                   >
-                                    {task.priority}
-                                  </span>
-                                  {task.assigned_member && (
-                                    <span className="text-[10px] font-bold text-text-muted flex items-center gap-1">
-                                      <svg
-                                        className="w-3 h-3"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth="2"
-                                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                        />
-                                      </svg>
-                                      {task.assigned_member.split("@")[0]}
+                                    {task.title}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${task.priority === "High" ? "bg-red-500/10 text-red-500" : task.priority === "Medium" ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500"}`}
+                                    >
+                                      {task.priority}
                                     </span>
+                                    {task.assigned_member && (
+                                      <span className="text-[10px] font-bold text-text-muted flex items-center gap-1">
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                          />
+                                        </svg>
+                                        {task.assigned_member.split("@")[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-bold uppercase tracking-wider shrink-0 px-2 py-1 rounded-md border ${task.status === "Completed" ? "bg-green-500/10 text-green-500 border-green-500/20" : task.status === "In Progress" ? "bg-purple-500/10 text-purple-500 border-purple-500/20" : "bg-background text-text-muted border-card-border"}`}
+                                >
+                                  {task.status}
+                                </span>
+                              </div>
+                              
+                              {/* Details: Comments & Attachments */}
+                              {(task.comments?.length > 0 || task.attachments?.length > 0) && (
+                                <div className="mt-1 pt-2 border-t border-card-border grid grid-cols-1 gap-2">
+                                  {task.comments?.length > 0 && (
+                                    <div>
+                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">Comments ({task.comments.length})</p>
+                                      <div className="space-y-1">
+                                        {task.comments.map(c => (
+                                          <div key={c.id} className="bg-card-bg p-2 rounded-lg text-[10px]">
+                                            <span className="font-bold text-primary mr-1">{c.author}:</span>
+                                            <span className="text-foreground">{c.text}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {task.attachments?.length > 0 && (
+                                    <div className={task.comments?.length > 0 ? "mt-2" : ""}>
+                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">Attachments ({task.attachments.length})</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {task.attachments.map(a => (
+                                          <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 bg-card-bg border border-card-border hover:border-primary/50 text-[10px] font-bold text-foreground px-2 py-1 rounded-lg transition-colors">
+                                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                                            {a.name}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-                              <span
-                                className={`text-[10px] font-bold uppercase tracking-wider shrink-0 px-2 py-1 rounded-md border ${task.status === "Completed" ? "bg-green-500/10 text-green-500 border-green-500/20" : task.status === "In Progress" ? "bg-purple-500/10 text-purple-500 border-purple-500/20" : "bg-background text-text-muted border-card-border"}`}
-                              >
-                                {task.status}
-                              </span>
+                              )}
                             </div>
                           ))}
                         </div>
