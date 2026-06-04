@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import apiClient from "@/utils/apiClient";
+import { getActivities } from "@/utils/activityLogger";
 import { useSelector } from "react-redux";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -79,7 +80,6 @@ export default function DashboardPage() {
       if (t.status === "Completed") {
         completedTasks++;
         statusCounts.Completed++;
-        activities.push({ id: t.id || t._id, type: "completed", message: `Task "${t.title}" completed`, time: Date.now() - Math.random() * 86400000 });
       } else {
         pendingTasks++;
         if (t.status === "Todo") statusCounts.Todo++;
@@ -103,17 +103,12 @@ export default function DashboardPage() {
         if (!memberProductivity[t.assigned_member]) memberProductivity[t.assigned_member] = { total: 0, completed: 0 };
         memberProductivity[t.assigned_member].total++;
         if (t.status === "Completed") memberProductivity[t.assigned_member].completed++;
-        
-        if (t.status !== "Completed") {
-          activities.push({ id: t.id || t._id, type: "assigned", message: `Task "${t.title}" assigned`, time: Date.now() - Math.random() * 86400000 * 2 });
-        }
       }
     });
   });
 
-  // Sort activities newest first and take top 5
-  activities.sort((a, b) => b.time - a.time);
-  const recentActivities = activities.slice(0, 5);
+  // Get real persistent activities
+  const recentActivities = getActivities().slice(0, 5);
 
   // --- 2. Chart Configurations (ApexCharts) ---
 

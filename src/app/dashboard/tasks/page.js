@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import apiClient from "@/utils/apiClient";
 import { useSelector } from "react-redux";
 import Link from "next/link";
-import { showError, showProcessing, showSuccess } from "@/components/pages/Alert";
+import { showError, showProcessing, showSuccess, showConfirmation } from "@/components/pages/Alert";
 import MemberRoute from "@/routes/MemberRoute";
 
 export default function MyTasksPage() {
@@ -38,6 +38,14 @@ export default function MyTasksPage() {
   };
 
   const handleStatusChange = async (taskToUpdate, newStatus, parentProject) => {
+    const result = await showConfirmation(
+      "Change Task Status?",
+      `Are you sure you want to change the status to ${newStatus}?`,
+      "Yes, Change",
+      "Cancel"
+    );
+    if (!result.isConfirmed) return;
+
     try {
       showProcessing("Updating Task...", "Please wait");
       const updatedTasks = (parentProject.tasks || []).map(t => {

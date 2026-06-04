@@ -17,6 +17,7 @@ export const metadata = {
 };
 
 import StoreProvider from "@/store/StoreProvider";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 export default function RootLayout({ children }) {
   return (
@@ -25,7 +26,11 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
+        </StoreProvider>
       </body>
     </html>
   );

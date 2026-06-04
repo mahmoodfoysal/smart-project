@@ -6,7 +6,8 @@ import { auth } from "@/firebase/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();
@@ -16,6 +17,10 @@ export default function DashboardLayout({ children }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotifications();
 
   useEffect(() => {
     // Check initial theme from localStorage or system preference
@@ -61,12 +66,12 @@ export default function DashboardLayout({ children }) {
 
   const menuItems = [
     {
-      name: "OVERVIEW",
+      name: "Overview",
       path: "/dashboard",
       icon: "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z",
     },
     {
-      name: "MANAGE USER",
+      name: "Manage Users",
       path: "/dashboard/admin",
       icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
     },
@@ -214,29 +219,6 @@ export default function DashboardLayout({ children }) {
           </nav>
 
           <div className="p-4 space-y-1 border-t border-card-border pt-4 mt-auto">
-            <Link
-              href="/"
-              title={isSidebarCollapsed ? "Back to Home" : undefined}
-              className={`flex items-center gap-4 py-3 text-[13px] font-bold text-text-muted hover:text-foreground transition-colors rounded-xl hover:bg-background 
-                ${isSidebarCollapsed ? "md:justify-center md:px-0 px-4" : "px-4"}`}
-            >
-              <svg
-                className="w-5 h-5 flex-shrink-0 text-text-muted"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                ></path>
-              </svg>
-              <span className={`${isSidebarCollapsed ? "md:hidden" : ""}`}>
-                BACK TO HOME
-              </span>
-            </Link>
             <button
               onClick={handleLogout}
               title={isSidebarCollapsed ? "Logout System" : undefined}
@@ -288,6 +270,89 @@ export default function DashboardLayout({ children }) {
             </button>
 
             <div className="flex items-center gap-4 md:gap-6">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className="relative w-10 h-10 rounded-full flex items-center justify-center hover:bg-background transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5 text-text-muted"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-card-bg"></span>
+                  )}
+                </button>
+
+                {isNotifOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsNotifOpen(false)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-80 bg-card-bg border border-card-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                      <div className="p-4 border-b border-card-border bg-background/50 flex justify-between items-center">
+                        <p className="font-bold text-foreground text-sm">
+                          Notifications
+                        </p>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {notifications.length === 0 ? (
+                          <div className="p-6 text-center text-text-muted text-xs">
+                            No notifications yet.
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-card-border">
+                            {notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                onClick={() => markAsRead(n.id)}
+                                className={`p-4 cursor-pointer hover:bg-background transition-colors flex gap-3 ${!n.read ? "bg-primary/5" : ""}`}
+                              >
+                                <div
+                                  className={`shrink-0 w-2 h-2 mt-1.5 rounded-full ${!n.read ? "bg-primary" : "bg-transparent"}`}
+                                ></div>
+                                <div>
+                                  <p
+                                    className={`text-sm ${!n.read ? "font-bold text-foreground" : "text-foreground/80"}`}
+                                  >
+                                    {n.title}
+                                  </p>
+                                  <p className="text-xs text-text-muted mt-0.5 line-clamp-2">
+                                    {n.message}
+                                  </p>
+                                  <p className="text-[10px] text-text-muted mt-2">
+                                    {new Date(n.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
@@ -346,7 +411,7 @@ export default function DashboardLayout({ children }) {
                   </div>
                   <div className="hidden sm:flex flex-col justify-center">
                     <p className="text-foreground font-bold text-[13px] leading-tight truncate max-w-[120px]">
-                      {user?.displayName || "Foysal Mahmood"}
+                      {user?.displayName}
                     </p>
                     <p className="text-[10px] text-text-muted truncate max-w-[120px]">
                       {user?.email || "foysalset959@gmail.com"}
@@ -377,10 +442,10 @@ export default function DashboardLayout({ children }) {
                     <div className="absolute right-0 mt-2 w-56 bg-card-bg border border-card-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                       <div className="p-4 border-b border-card-border bg-background/50">
                         <p className="font-bold text-foreground text-sm truncate">
-                          {user?.displayName || "Foysal Mahmood"}
+                          {user?.displayName}
                         </p>
                         <p className="text-xs text-text-muted truncate">
-                          {user?.email || "foysalset959@gmail.com"}
+                          {user?.email}
                         </p>
                       </div>
                       <div className="p-2 space-y-1">
@@ -403,26 +468,6 @@ export default function DashboardLayout({ children }) {
                             ></path>
                           </svg>
                           My Profile
-                        </Link>
-                        <Link
-                          href="/dashboard/settings"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-background rounded-lg transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4 text-text-muted"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            ></path>
-                          </svg>
-                          Account Settings
                         </Link>
                       </div>
                       <div className="p-2 border-t border-card-border">

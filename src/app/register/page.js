@@ -4,15 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/firebase/firebase";
+import { useDispatch } from "react-redux";
+import { setUser } from "@/store/authSlice";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
+import PublicRoute from "@/routes/PublicRoute";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -24,8 +30,18 @@ export default function RegisterPage() {
       // Update profile with name
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
-          displayName: name
+          displayName: name,
+          photoURL: photoUrl || null,
         });
+
+        // Dispatch updated user to Redux state
+        const updatedUser = {
+          uid: auth.currentUser.uid,
+          email: auth.currentUser.email,
+          displayName: name,
+          photoUrl: photoUrl || null,
+        };
+        dispatch(setUser(updatedUser));
       }
       router.push("/"); // Redirect to home or dashboard after successful registration
     } catch (err) {
@@ -49,12 +65,42 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background">
-      {/* Dynamic Background Gradients */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[100px] pointer-events-none animate-pulse"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <PublicRoute>
+      <div className="min-h-screen w-full flex bg-background">
+      <ThemeToggle />
+      
+      {/* Left Side - Branding & Image (Hidden on Mobile) */}
+      <div className="hidden lg:flex w-1/2 relative bg-primary/5 items-center justify-center p-12 overflow-hidden border-r border-card-border">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2850&q=80" 
+            alt="Team Collaboration" 
+            className="w-full h-full object-cover opacity-40 mix-blend-luminosity dark:opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/30 blur-[120px] pointer-events-none animate-pulse"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-lg">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-primary/30">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          </div>
+          <h1 className="text-4xl xl:text-5xl font-bold text-foreground mb-6 leading-tight">
+            Join the smart way to <span className="text-primary">collaborate</span>.
+          </h1>
+          <p className="text-lg text-text-muted leading-relaxed">
+            Create an account to streamline your workflow, manage tasks seamlessly, and connect with your team instantly.
+          </p>
+        </div>
+      </div>
 
-      <div className="w-full max-w-md p-8 m-4 rounded-3xl glass-card relative z-10 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
+      {/* Right Side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center relative overflow-hidden p-4 sm:p-8">
+        {/* Dynamic Background Gradients */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[100px] pointer-events-none animate-pulse lg:hidden"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
+
+        <div className="w-full max-w-md p-8 m-4 rounded-3xl glass-card relative z-10 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Create Account</h1>
           <p className="text-foreground/70 text-sm">Join us to start collaborating on tasks</p>
@@ -126,6 +172,20 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
+            <label className="text-sm font-medium text-foreground/80 pl-1" htmlFor="photoUrl">
+              Photo URL (Optional)
+            </label>
+            <input
+              id="photoUrl"
+              type="url"
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-input-bg border border-input-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200 text-foreground placeholder:text-foreground/40"
+              placeholder="https://example.com/your-photo.jpg"
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-sm font-medium text-foreground/80 pl-1" htmlFor="password">
               Password
             </label>
@@ -169,5 +229,7 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  </div>
+  </PublicRoute>
   );
 }

@@ -11,8 +11,12 @@ import {
   showSuccess,
   showConfirmation,
 } from "@/components/pages/Alert";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { logActivity } from "@/utils/activityLogger";
+import { useSelector } from "react-redux";
 
 export default function ProjectTaskBoard() {
+  const { user } = useSelector((state) => state.auth);
   const params = useParams();
   const router = useRouter();
   const projectId = params?.id;
@@ -21,6 +25,8 @@ export default function ProjectTaskBoard() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const { addNotification } = useNotifications();
 
   // Drawer & Form State for Tasks
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -35,7 +41,13 @@ export default function ProjectTaskBoard() {
     due_date: "",
     priority: "Medium",
     status: "Todo",
+    comments: [],
+    attachments: [],
   });
+
+  const [newComment, setNewComment] = useState("");
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState("");
+  const [newAttachmentName, setNewAttachmentName] = useState("");
 
   // Filter state for Kanban Board
   const [priorityFilter, setPriorityFilter] = useState("All");
@@ -114,6 +126,8 @@ export default function ProjectTaskBoard() {
         due_date: formattedDate,
         priority: task.priority || "Medium",
         status: task.status || "Todo",
+        comments: task.comments || [],
+        attachments: task.attachments || [],
       });
     } else {
       setFormData({
@@ -123,6 +137,8 @@ export default function ProjectTaskBoard() {
         due_date: "",
         priority: "Medium",
         status: "Todo",
+        comments: [],
+        attachments: [],
       });
     }
     setIsDrawerOpen(true);
@@ -147,6 +163,37 @@ export default function ProjectTaskBoard() {
       );
       return updated;
     });
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const comment = {
+      id: Date.now().toString(),
+      text: newComment.trim(),
+      author: user?.email?.split("@")[0] || "User",
+      timestamp: new Date().toISOString(),
+    };
+    setFormData((prev) => ({ ...prev, comments: [...prev.comments, comment] }));
+    setNewComment("");
+  };
+
+  const handleAddAttachment = () => {
+    if (!newAttachmentUrl.trim()) return;
+    const attachment = {
+      id: Date.now().toString(),
+      url: newAttachmentUrl.trim(),
+      name:
+        newAttachmentName.trim() ||
+        newAttachmentUrl.trim().split("/").pop() ||
+        "Attachment",
+      timestamp: new Date().toISOString(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      attachments: [...prev.attachments, attachment],
+    }));
+    setNewAttachmentUrl("");
+    setNewAttachmentName("");
   };
 
   const generateTaskId = () => {
@@ -200,6 +247,15 @@ export default function ProjectTaskBoard() {
       return;
     }
 
+    const action = selectedTask ? "Update Task" : "Create Task";
+    const result = await showConfirmation(
+      action,
+      `Are you sure you want to ${action.toLowerCase()}?`,
+      "Yes, proceed",
+      "Cancel",
+    );
+    if (!result.isConfirmed) return;
+
     showProcessing("Saving Task...", "Please wait.");
 
     let updatedTasks = [...(project.tasks || [])];
@@ -228,6 +284,14 @@ export default function ProjectTaskBoard() {
       selectedTask ? "Task updated!" : "Task created!",
     );
     if (isSaved) {
+      logActivity(
+        selectedTask ? "assigned" : "created",
+        `${selectedTask ? "Updated" : "Created"} task "${formData.title}" in ${project?.project_name}`,
+      );
+      addNotification(
+        "Task Saved",
+        `"${formData.title}" was successfully saved.`,
+      );
       handleCloseDrawer();
     }
   };
@@ -249,10 +313,24 @@ export default function ProjectTaskBoard() {
     );
 
     const updatedProject = { ...project, tasks: updatedTasks };
-    await saveProject(updatedProject, "Task was successfully removed.");
+    const isSaved = await saveProject(
+      updatedProject,
+      "Task was successfully removed.",
+    );
+    if (isSaved) {
+      logActivity("system", `Deleted task "${taskToDelete.title}"`);
+    }
   };
 
   const handleStatusChange = async (taskToUpdate, newStatus) => {
+    const result = await showConfirmation(
+      "Change Task Status?",
+      `Are you sure you want to change the status of "${taskToUpdate.title}" to ${newStatus}?`,
+      "Yes, Change",
+      "Cancel",
+    );
+    if (!result.isConfirmed) return;
+
     showProcessing("Updating Status...", "Please wait.");
 
     const updatedTasks = project.tasks.map((t) => {
@@ -263,7 +341,20 @@ export default function ProjectTaskBoard() {
     });
 
     const updatedProject = { ...project, tasks: updatedTasks };
-    await saveProject(updatedProject, `Task moved to ${newStatus}`);
+    const isSaved = await saveProject(
+      updatedProject,
+      `Task moved to ${newStatus}`,
+    );
+    if (isSaved) {
+      if (newStatus === "Completed") {
+        logActivity("completed", `Completed task "${taskToUpdate.title}"`);
+      } else {
+        logActivity(
+          "system",
+          `Moved task "${taskToUpdate.title}" to ${newStatus}`,
+        );
+      }
+    }
   };
 
   const handleAddMember = async () => {
@@ -272,6 +363,14 @@ export default function ProjectTaskBoard() {
       showError("Already Added", "This member is already in the project.");
       return;
     }
+    const result = await showConfirmation(
+      "Add Member?",
+      `Are you sure you want to add ${selectedNewMember} to this project?`,
+      "Yes, Add",
+      "Cancel",
+    );
+    if (!result.isConfirmed) return;
+
     const updatedMembers = [...(project.members || []), selectedNewMember];
     const updatedProject = { ...project, members: updatedMembers };
     showProcessing("Adding Member...", "Please wait.");
@@ -280,6 +379,14 @@ export default function ProjectTaskBoard() {
       "Member added successfully.",
     );
     if (success) {
+      logActivity(
+        "assigned",
+        `Added ${selectedNewMember} to ${project.project_name}`,
+      );
+      addNotification(
+        "Member Added",
+        `${selectedNewMember} joined the project.`,
+      );
       setIsAddMemberOpen(false);
       setSelectedNewMember("");
     }
@@ -947,6 +1054,208 @@ export default function ProjectTaskBoard() {
                 </select>
               </div>
             </form>
+
+            {/* Comments and Attachments Sections */}
+            <div className="mt-8 space-y-8 border-t border-card-border pt-6">
+              {/* Attachments Section */}
+              <div>
+                <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                    />
+                  </svg>
+                  Attachments
+                </h3>
+
+                {formData.attachments.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {formData.attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between bg-background border border-card-border p-3 rounded-xl hover:border-primary/50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="bg-primary/10 text-primary p-2 rounded-lg shrink-0">
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                              />
+                            </svg>
+                          </div>
+                          <div className="truncate text-sm font-semibold text-foreground">
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary hover:underline transition-colors"
+                            >
+                              {att.name}
+                            </a>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              attachments: prev.attachments.filter(
+                                (a) => a.id !== att.id,
+                              ),
+                            }))
+                          }
+                          className="text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={newAttachmentName}
+                      onChange={(e) => setNewAttachmentName(e.target.value)}
+                      placeholder="File Name (optional)"
+                      className="w-full bg-background border border-card-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+                    />
+                    <input
+                      type="url"
+                      value={newAttachmentUrl}
+                      onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                      placeholder="Paste File URL (e.g. Google Drive link)"
+                      className="w-full bg-background border border-card-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddAttachment}
+                    disabled={!newAttachmentUrl.trim()}
+                    className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white rounded-xl px-4 text-xs font-bold transition-all disabled:opacity-50 shrink-0 self-end h-[34px]"
+                  >
+                    Add Link
+                  </button>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div>
+                <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                  Activity & Comments
+                </h3>
+
+                {formData.comments.length > 0 ? (
+                  <div className="space-y-4 mb-4">
+                    {formData.comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="bg-background border border-card-border p-3 rounded-xl group relative"
+                      >
+                        <div className="flex justify-between items-center mb-1 pr-6">
+                          <span className="text-xs font-bold text-foreground">
+                            {comment.author}
+                          </span>
+                          <span className="text-[10px] font-bold text-text-muted">
+                            {new Date(comment.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground/80 whitespace-pre-wrap pr-6">
+                          {comment.text}
+                        </p>
+                        <button
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              comments: prev.comments.filter((c) => c.id !== comment.id),
+                            }))
+                          }
+                          className="absolute top-3 right-3 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-muted italic mb-4">
+                    No comments yet. Start the conversation!
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Write a comment..."
+                    rows={2}
+                    className="w-full bg-background border border-card-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim()}
+                    className="self-end bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white rounded-xl px-4 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
+                  >
+                    Post Comment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="p-6 border-t border-card-border bg-card-bg/50">

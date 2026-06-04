@@ -43,7 +43,7 @@ export default function ManageProjectsPage() {
     dead_line: "",
     status: "Active",
     tasks: [],
-    members: "",
+    members: [""],
   });
 
   const [formError, setFormError] = useState("");
@@ -61,7 +61,13 @@ export default function ManageProjectsPage() {
         "/api/smart-project/get-project-list",
       );
       if (response) {
-        setProjects(response.data.list_data || response.data || []);
+        const rawData = response.data.list_data || response.data || [];
+        const sanitizedData = Array.isArray(rawData) ? rawData.map(p => ({
+          ...p,
+          members: p.members || [],
+          tasks: p.tasks || []
+        })) : [];
+        setProjects(sanitizedData);
       }
     } catch (err) {
       console.error("Error fetching projects:", err);
@@ -112,7 +118,7 @@ export default function ManageProjectsPage() {
         dead_line: formattedDate,
         status: selectedProject.status || "Active",
         tasks: selectedProject.tasks || [],
-        members: selectedProject.members?.join(", ") || "",
+        members: selectedProject.members?.length ? [...selectedProject.members] : [""],
       });
     } else {
       setFormData({
@@ -122,7 +128,7 @@ export default function ManageProjectsPage() {
         dead_line: "",
         status: "Active",
         tasks: [],
-        members: "",
+        members: [""],
       });
     }
   }, [selectedProject, isDrawerOpen]);
@@ -131,6 +137,24 @@ export default function ManageProjectsPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (formError) setFormError("");
+  };
+
+  const handleMemberChange = (index, value) => {
+    const newMembers = [...formData.members];
+    newMembers[index] = value;
+    setFormData((prev) => ({ ...prev, members: newMembers }));
+    if (formError) setFormError("");
+  };
+
+  const addMemberField = () => {
+    setFormData((prev) => ({ ...prev, members: [...prev.members, ""] }));
+  };
+
+  const removeMemberField = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      members: prev.members.filter((_, i) => i !== index),
+    }));
   };
 
   const validateForm = () => {
@@ -153,6 +177,16 @@ export default function ManageProjectsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    
+    const action = selectedProject ? "Update Project" : "Create Project";
+    const result = await showConfirmation(
+      action,
+      `Are you sure you want to ${action.toLowerCase()}?`,
+      "Yes, proceed",
+      "Cancel"
+    );
+    if (!result.isConfirmed) return;
+
     setIsSubmitting(true);
     setFormError("");
 
@@ -163,13 +197,10 @@ export default function ManageProjectsPage() {
         dead_line: formData.dead_line,
         status: formData.status,
         tasks:
-          formData.tasks && formData.tasks.length > 0 ? formData.tasks : null,
-        members: formData.members
-          ? formData.members
-              .split(",")
-              .map((m) => m.trim())
-              .filter(Boolean)
-          : null,
+          formData.tasks && formData.tasks.length > 0 ? formData.tasks : [],
+        members: Array.isArray(formData.members)
+          ? formData.members.map((m) => m.trim()).filter(Boolean)
+          : [],
       };
 
       if (selectedProject) {
@@ -246,6 +277,16 @@ export default function ManageProjectsPage() {
   };
 
   const handleInlineStatusChange = async (project, newStatus) => {
+    const result = await showConfirmation(
+      "Change Status?",
+      `Are you sure you want to change the status of "${project.project_name}" to ${newStatus}?`,
+      "Yes, Change",
+      "Cancel"
+    );
+    if (!result.isConfirmed) return;
+
+    showProcessing("Updating Status...", "Please wait.");
+
     try {
       const payload = { ...project, status: newStatus };
       await apiClient.post(
@@ -1088,16 +1129,43 @@ export default function ManageProjectsPage() {
 
               <div>
                 <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
-                  Team Members (Comma separated emails)
+                  Team Members
                 </label>
-                <input
-                  type="text"
-                  name="members"
-                  value={formData.members}
-                  onChange={handleChange}
-                  placeholder="e.g. user@example.com, admin@example.com"
-                  className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-text-muted/50 focus:outline-none focus:border-primary transition-colors"
-                />
+                <div className="space-y-3">
+                  {Array.isArray(formData.members) && formData.members.map((member, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input
+                        type="email"
+                        value={member}
+                        onChange={(e) => handleMemberChange(index, e.target.value)}
+                        placeholder="e.g. user@example.com"
+                        className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-text-muted/50 focus:outline-none focus:border-primary transition-colors"
+                      />
+                      {formData.members.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMemberField(index)}
+                          className="text-red-500 hover:bg-red-500/10 p-2 rounded-xl transition-colors shrink-0"
+                          title="Remove Member"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addMemberField}
+                    className="text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1 mt-1 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Team Member
+                  </button>
+                </div>
               </div>
 
               <div>
