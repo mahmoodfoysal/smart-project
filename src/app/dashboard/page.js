@@ -37,8 +37,29 @@ export default function DashboardPage() {
     }
   };
 
+  // Apply Role-Based Filtering
+  const isTeamMember = user?.role === "Team Member";
+
+  const filteredProjects = projects
+    .filter((proj) => {
+      if (isTeamMember) {
+        return proj.members && proj.members.includes(user.email);
+      }
+      return true; // Admin/PM see all projects
+    })
+    .map((proj) => {
+      if (isTeamMember) {
+        // Only keep tasks assigned to them
+        return {
+          ...proj,
+          tasks: (proj.tasks || []).filter((t) => t.assigned_member === user.email),
+        };
+      }
+      return proj;
+    });
+
   // --- 1. Data Aggregation for KPIs & Charts ---
-  const totalProjects = projects.length;
+  const totalProjects = filteredProjects.length;
   let totalTasks = 0;
   let completedTasks = 0;
   let pendingTasks = 0;
@@ -57,7 +78,7 @@ export default function DashboardPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  projects.forEach((proj) => {
+  filteredProjects.forEach((proj) => {
     const tasks = proj.tasks || [];
     totalTasks += tasks.length;
     
