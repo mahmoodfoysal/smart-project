@@ -1091,28 +1091,32 @@ export default function ManageProjectsPage() {
             isDrawerOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="p-6 border-b border-card-border bg-card-bg/50 flex justify-between items-center">
+          {/* Close button positioned outside to the left */}
+          <button
+            onClick={handleCloseDrawer}
+            className={`absolute -left-14 top-6 w-10 h-10 flex items-center justify-center rounded-xl bg-card-bg text-text-muted hover:text-foreground shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-card-border transition-all duration-300 z-50 ${
+              isDrawerOpen ? "opacity-100 visible" : "opacity-0 invisible"
+            }`}
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+
+          <div className="p-6 border-b border-card-border bg-card-bg/50">
             <h2 className="text-xl font-black text-foreground uppercase tracking-tight">
               {selectedProject ? "Edit Project" : "New Project"}
             </h2>
-            <button
-              onClick={handleCloseDrawer}
-              className="text-text-muted hover:text-foreground p-2 rounded-xl hover:bg-background transition-colors"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
