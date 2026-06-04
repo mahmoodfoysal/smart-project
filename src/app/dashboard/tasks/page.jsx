@@ -610,7 +610,11 @@ function TaskCard({ task, onStatusChange, onProjectClick }) {
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              {new Date(task.due_date).toLocaleDateString()}
+              {new Date(task.due_date).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
             </span>
           )}
         </div>

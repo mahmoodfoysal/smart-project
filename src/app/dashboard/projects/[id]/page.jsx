@@ -93,7 +93,9 @@ export default function ProjectTaskBoard() {
         }
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError(err.response?.data?.error || "Failed to load project details.");
+        setError(
+          err.response?.data?.error || "Failed to load project details.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -565,6 +567,7 @@ export default function ProjectTaskBoard() {
               {new Date(task.due_date).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
+                year: "numeric",
               })}
             </span>
           </div>

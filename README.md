@@ -54,7 +54,12 @@ A smart project and task collaboration system.
 - Project Management : Project manager can assign new project add member and assign task. Here also apply some filter. manager can see filter wise.
 - My task : Team member can view their assigned tasks and change status. Team member can only view his assing task and change status.
 
-## note: If you need admin dashboard credentials. Please contact with me.
+## Demo credentials
+
+- Team member user : [mikle@smp.com]
+- password: [123456]
+
+## note: If you need admin dashboard credentials. Please contact [foysalcse033@gmail.com]
 
 ## Setup and Installation
 

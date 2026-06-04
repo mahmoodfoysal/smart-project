@@ -261,17 +261,17 @@ export default function ManageAdminPage() {
 
         {/* Table Container */}
         <div className="flex-1 bg-card-bg border border-card-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-card-border flex items-center justify-between">
+          <div className="p-6 border-b border-card-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h3 className="font-bold text-sm text-foreground uppercase tracking-wide">
               User List
             </h3>
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="SEARCH USERS..."
-                className="bg-background border border-card-border rounded-lg pl-9 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors w-[300px]"
+                className="bg-background border border-card-border rounded-lg pl-9 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors w-full sm:w-[300px]"
               />
               <svg
                 className="w-4 h-4 text-text-muted absolute left-3 top-2.5 pointer-events-none"
