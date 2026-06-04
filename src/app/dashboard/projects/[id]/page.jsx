@@ -57,50 +57,52 @@ export default function ProjectTaskBoard() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [selectedNewMember, setSelectedNewMember] = useState("");
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-
-      // Fetch projects
-      const projRes = await apiClient.get(
-        "/api/smart-project/get-project-list",
-      );
-      const allProjects = projRes.data?.list_data || projRes.data || [];
-      const currentProject = allProjects.find(
-        (p) => (p._id || p.id) === projectId,
-      );
-
-      if (!currentProject) {
-        setError("Project not found.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Initialize tasks and members array if it doesn't exist
-      if (!currentProject.tasks) {
-        currentProject.tasks = [];
-      }
-      if (!currentProject.members) {
-        currentProject.members = [];
-      }
-      setProject(currentProject);
-
-      // Fetch users for assignment
-      const userRes = await apiClient.get("/api/admin/get-admin-list/");
-      if (userRes.data?.list_data) {
-        setUsers(userRes.data.list_data);
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.response?.data?.error || "Failed to load project details.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch projects
+        const projRes = await apiClient.get(
+          "/api/smart-project/get-project-list",
+        );
+        const allProjects = projRes.data?.list_data || projRes.data || [];
+        const currentProject = allProjects.find(
+          (p) => (p._id || p.id) === projectId,
+        );
+
+        if (!currentProject) {
+          setError("Project not found.");
+          setIsLoading(false);
+          return;
+        }
+
+        // Initialize tasks and members array if it doesn't exist
+        if (!currentProject.tasks) {
+          currentProject.tasks = [];
+        }
+        if (!currentProject.members) {
+          currentProject.members = [];
+        }
+        setProject(currentProject);
+
+        // Fetch users for assignment
+        const userRes = await apiClient.get("/api/admin/get-admin-list/");
+        if (userRes.data?.list_data) {
+          setUsers(userRes.data.list_data);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err.response?.data?.error || "Failed to load project details.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (projectId) {
-      fetchData();
+      setTimeout(() => {
+        fetchData();
+      }, 0);
     }
   }, [projectId]);
 
@@ -1209,7 +1211,9 @@ export default function ProjectTaskBoard() {
                           onClick={() =>
                             setFormData((prev) => ({
                               ...prev,
-                              comments: prev.comments.filter((c) => c.id !== comment.id),
+                              comments: prev.comments.filter(
+                                (c) => c.id !== comment.id,
+                              ),
                             }))
                           }
                           className="absolute top-3 right-3 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"

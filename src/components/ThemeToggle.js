@@ -14,13 +14,19 @@ export default function ThemeToggle() {
       (!storedTheme &&
         window.matchMedia("(prefers-color-scheme: dark)").matches)
     ) {
-      setIsDark(true);
+      setTimeout(() => {
+        setIsDark(true);
+      }, 0);
       document.documentElement.classList.add("dark");
     } else {
-      setIsDark(false);
+      setTimeout(() => {
+        setIsDark(false);
+      }, 0);
       document.documentElement.classList.remove("dark");
     }
-    setMounted(true);
+    setTimeout(() => {
+      setMounted(true);
+    }, 0);
   }, []);
 
   const toggleTheme = () => {
@@ -37,8 +43,7 @@ export default function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <button className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center bg-card-bg/50 backdrop-blur border border-card-border shadow-sm z-50">
-      </button>
+      <button className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center bg-card-bg/50 backdrop-blur border border-card-border shadow-sm z-50"></button>
     );
   }
 

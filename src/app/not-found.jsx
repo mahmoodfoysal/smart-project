@@ -21,7 +21,7 @@ export default function NotFound() {
             />
           </svg>
         </div>
-        
+
         <h1 className="text-4xl font-black mb-3 tracking-tight text-foreground">
           404
         </h1>
@@ -29,7 +29,8 @@ export default function NotFound() {
           Page Not Found
         </h2>
         <p className="text-sm text-text-muted mb-8 leading-relaxed">
-          Oops! It looks like you've wandered into an unknown route. The page you are looking for doesn't exist or has been moved.
+          Oops! It looks like you have wandered into an unknown route. The page
+          you are looking for does not exist or has been moved.
         </p>
 
         <Link

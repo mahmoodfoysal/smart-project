@@ -20,16 +20,22 @@ export const NotificationProvider = ({ children }) => {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setNotifications(parsed);
-        setUnreadCount(parsed.filter(n => !n.read).length);
+        setTimeout(() => {
+          setNotifications(parsed);
+          setUnreadCount(parsed.filter((n) => !n.read).length);
+        }, 0);
       } catch (e) {
         console.error("Failed to parse notifications from localStorage");
-        setNotifications([]);
-        setUnreadCount(0);
+        setTimeout(() => {
+          setNotifications([]);
+          setUnreadCount(0);
+        }, 0);
       }
     } else {
-      setNotifications([]);
-      setUnreadCount(0);
+      setTimeout(() => {
+        setNotifications([]);
+        setUnreadCount(0);
+      }, 0);
     }
   }, [storageKey]);
 
@@ -44,29 +50,29 @@ export const NotificationProvider = ({ children }) => {
       message,
       type,
       read: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
-    setNotifications(prev => {
+
+    setNotifications((prev) => {
       const updated = [newNotif, ...prev].slice(0, 50); // Keep last 50
       saveToStorage(updated);
-      setUnreadCount(updated.filter(n => !n.read).length);
+      setUnreadCount(updated.filter((n) => !n.read).length);
       return updated;
     });
   };
 
   const markAsRead = (id) => {
-    setNotifications(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+    setNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
       saveToStorage(updated);
-      setUnreadCount(updated.filter(n => !n.read).length);
+      setUnreadCount(updated.filter((n) => !n.read).length);
       return updated;
     });
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => {
-      const updated = prev.map(n => ({ ...n, read: true }));
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
       saveToStorage(updated);
       setUnreadCount(0);
       return updated;
@@ -80,7 +86,16 @@ export const NotificationProvider = ({ children }) => {
   };
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, addNotification, markAsRead, markAllAsRead, clearAll }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        addNotification,
+        markAsRead,
+        markAllAsRead,
+        clearAll,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );

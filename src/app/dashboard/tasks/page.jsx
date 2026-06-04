@@ -23,10 +23,6 @@ export default function MyTasksPage() {
   const [projectDetails, setProjectDetails] = useState(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchProjects();
-  }, [user]);
-
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
@@ -43,6 +39,12 @@ export default function MyTasksPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    setTimeout(() => {
+      fetchProjects();
+    }, 0);
+  }, [user]);
 
   const handleStatusChange = async (taskToUpdate, newStatus, parentProject) => {
     const result = await showConfirmation(
@@ -432,30 +434,64 @@ export default function MyTasksPage() {
                                   {task.status}
                                 </span>
                               </div>
-                              
+
                               {/* Details: Comments & Attachments */}
-                              {(task.comments?.length > 0 || task.attachments?.length > 0) && (
+                              {(task.comments?.length > 0 ||
+                                task.attachments?.length > 0) && (
                                 <div className="mt-1 pt-2 border-t border-card-border grid grid-cols-1 gap-2">
                                   {task.comments?.length > 0 && (
                                     <div>
-                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">Comments ({task.comments.length})</p>
+                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">
+                                        Comments ({task.comments.length})
+                                      </p>
                                       <div className="space-y-1">
-                                        {task.comments.map(c => (
-                                          <div key={c.id} className="bg-card-bg p-2 rounded-lg text-[10px]">
-                                            <span className="font-bold text-primary mr-1">{c.author}:</span>
-                                            <span className="text-foreground">{c.text}</span>
+                                        {task.comments.map((c) => (
+                                          <div
+                                            key={c.id}
+                                            className="bg-card-bg p-2 rounded-lg text-[10px]"
+                                          >
+                                            <span className="font-bold text-primary mr-1">
+                                              {c.author}:
+                                            </span>
+                                            <span className="text-foreground">
+                                              {c.text}
+                                            </span>
                                           </div>
                                         ))}
                                       </div>
                                     </div>
                                   )}
                                   {task.attachments?.length > 0 && (
-                                    <div className={task.comments?.length > 0 ? "mt-2" : ""}>
-                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">Attachments ({task.attachments.length})</p>
+                                    <div
+                                      className={
+                                        task.comments?.length > 0 ? "mt-2" : ""
+                                      }
+                                    >
+                                      <p className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-1">
+                                        Attachments ({task.attachments.length})
+                                      </p>
                                       <div className="flex flex-wrap gap-2">
-                                        {task.attachments.map(a => (
-                                          <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 bg-card-bg border border-card-border hover:border-primary/50 text-[10px] font-bold text-foreground px-2 py-1 rounded-lg transition-colors">
-                                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                                        {task.attachments.map((a) => (
+                                          <a
+                                            key={a.id}
+                                            href={a.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 bg-card-bg border border-card-border hover:border-primary/50 text-[10px] font-bold text-foreground px-2 py-1 rounded-lg transition-colors"
+                                          >
+                                            <svg
+                                              className="w-3 h-3 text-primary"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth="2"
+                                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                                              />
+                                            </svg>
                                             {a.name}
                                           </a>
                                         ))}

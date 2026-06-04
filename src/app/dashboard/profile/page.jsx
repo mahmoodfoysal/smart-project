@@ -12,7 +12,12 @@ import {
   showConfirmation,
 } from "@/components/pages/Alert";
 import { auth } from "@/firebase/firebase";
-import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import {
+  updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+} from "firebase/auth";
 
 export default function ProfilePage() {
   const { user } = useSelector((state) => state.auth);
@@ -37,10 +42,12 @@ export default function ProfilePage() {
   // Initialize form with user data
   useEffect(() => {
     if (user) {
-      setProfileForm({
-        name: user.displayName || user.name || user.full_name || "",
-        photoUrl: user.photoUrl || user.photo_url || "",
-      });
+      setTimeout(() => {
+        setProfileForm({
+          name: user.displayName || user.name || user.full_name || "",
+          photoUrl: user.photoUrl || user.photo_url || "",
+        });
+      }, 0);
     }
   }, [user]);
 
@@ -63,12 +70,15 @@ export default function ProfilePage() {
       "Update Profile?",
       "Are you sure you want to save these changes to your profile?",
       "Yes, Save",
-      "Cancel"
+      "Cancel",
     );
     if (!result.isConfirmed) return;
 
     setIsProfileSubmitting(true);
-    showProcessing("Updating Profile...", "Please wait while we save your changes.");
+    showProcessing(
+      "Updating Profile...",
+      "Please wait while we save your changes.",
+    );
 
     try {
       if (!auth.currentUser) {
@@ -80,8 +90,11 @@ export default function ProfilePage() {
         photoURL: profileForm.photoUrl,
       });
 
-      showSuccess("Profile Updated!", "Your profile information has been updated.");
-      
+      showSuccess(
+        "Profile Updated!",
+        "Your profile information has been updated.",
+      );
+
       // Update Redux state with new user info
       dispatch(
         setUser({
@@ -89,13 +102,13 @@ export default function ProfilePage() {
           displayName: profileForm.name,
           name: profileForm.name,
           photoUrl: profileForm.photoUrl,
-        })
+        }),
       );
     } catch (err) {
       console.error("Profile update error:", err);
       showError(
         "Update Failed",
-        err.message || "Could not update your profile."
+        err.message || "Could not update your profile.",
       );
     } finally {
       setIsProfileSubmitting(false);
@@ -104,14 +117,20 @@ export default function ProfilePage() {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showError("Validation Error", "New password and confirm password do not match.");
+      showError(
+        "Validation Error",
+        "New password and confirm password do not match.",
+      );
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      showError("Validation Error", "New password must be at least 6 characters long.");
+      showError(
+        "Validation Error",
+        "New password must be at least 6 characters long.",
+      );
       return;
     }
 
@@ -119,7 +138,7 @@ export default function ProfilePage() {
       "Update Password?",
       "Are you sure you want to change your password? You will use the new password next time you log in.",
       "Yes, Change Password",
-      "Cancel"
+      "Cancel",
     );
     if (!result.isConfirmed) return;
 
@@ -131,20 +150,32 @@ export default function ProfilePage() {
       if (!currentUser) throw new Error("User not authenticated.");
 
       // Re-authenticate first
-      const credential = EmailAuthProvider.credential(currentUser.email, passwordForm.currentPassword);
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        passwordForm.currentPassword,
+      );
       await reauthenticateWithCredential(currentUser, credential);
 
       // Change password
       await updatePassword(currentUser, passwordForm.newPassword);
 
-      showSuccess("Password Updated!", "Your password was successfully changed.");
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      
+      showSuccess(
+        "Password Updated!",
+        "Your password was successfully changed.",
+      );
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (err) {
       console.error("Password update error:", err);
-      
+
       let errorMessage = "Could not change your password.";
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      if (
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
         errorMessage = "Your current password is incorrect.";
       } else if (err.message) {
         errorMessage = err.message;
@@ -186,31 +217,41 @@ export default function ProfilePage() {
             <div className="bg-card-bg border border-card-border rounded-3xl p-8 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
               {/* Decorative background element */}
               <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500 pointer-events-none"></div>
-              
+
               <div className="relative mb-6">
                 {profileForm.photoUrl || user?.photoUrl || user?.photo_url ? (
                   <img
-                    src={profileForm.photoUrl || user?.photoUrl || user?.photo_url}
+                    src={
+                      profileForm.photoUrl || user?.photoUrl || user?.photo_url
+                    }
                     alt={user?.name || "User Avatar"}
                     className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-xl ring-2 ring-primary/20"
-                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }}
                   />
                 ) : null}
                 {/* Fallback Initials Avatar (shows if no photoUrl, or if img errors out) */}
-                <div 
-                  className={`w-32 h-32 rounded-full bg-gradient-to-br from-primary to-purple-600 border-4 border-background shadow-xl items-center justify-center text-4xl font-black text-white ${profileForm.photoUrl || user?.photoUrl || user?.photo_url ? 'hidden' : 'flex'}`}
+                <div
+                  className={`w-32 h-32 rounded-full bg-gradient-to-br from-primary to-purple-600 border-4 border-background shadow-xl items-center justify-center text-4xl font-black text-white ${profileForm.photoUrl || user?.photoUrl || user?.photo_url ? "hidden" : "flex"}`}
                 >
-                  {getInitials(user?.displayName || user?.name || user?.full_name)}
+                  {getInitials(
+                    user?.displayName || user?.name || user?.full_name,
+                  )}
                 </div>
               </div>
 
               <h2 className="text-xl font-bold text-foreground mb-1">
-                {user?.displayName || user?.name || user?.full_name || "User Name"}
+                {user?.displayName ||
+                  user?.name ||
+                  user?.full_name ||
+                  "User Name"}
               </h2>
               <p className="text-sm text-text-muted mb-4 font-medium">
                 {user?.email || "user@example.com"}
               </p>
-              
+
               <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full">
                 {user?.role || "Member"}
               </span>
@@ -223,13 +264,23 @@ export default function ProfilePage() {
             <div className="bg-card-bg border border-card-border rounded-3xl p-8 shadow-sm">
               <h3 className="text-lg font-black text-foreground uppercase tracking-wide mb-6 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
                   </svg>
                 </div>
                 Personal Information
               </h3>
-              
+
               <form onSubmit={handleProfileSubmit} className="space-y-6">
                 <div>
                   <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
@@ -267,9 +318,24 @@ export default function ProfilePage() {
                   >
                     {isProfileSubmitting ? (
                       <>
-                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin h-4 w-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Saving...
                       </>
@@ -285,8 +351,18 @@ export default function ProfilePage() {
             <div className="bg-card-bg border border-card-border rounded-3xl p-8 shadow-sm">
               <h3 className="text-lg font-black text-foreground uppercase tracking-wide mb-6 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
                   </svg>
                 </div>
                 Security Details
@@ -348,9 +424,24 @@ export default function ProfilePage() {
                   >
                     {isPasswordSubmitting ? (
                       <>
-                        <svg className="animate-spin h-4 w-4 text-text-muted" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin h-4 w-4 text-text-muted"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Updating...
                       </>

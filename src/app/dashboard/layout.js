@@ -254,7 +254,7 @@ export default function DashboardLayout({ children }) {
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col overflow-hidden bg-background relative transition-colors duration-300">
           {/* Top Navbar */}
-          <header className="h-[80px] border-b border-card-border bg-card-bg flex items-center justify-between md:justify-end px-4 md:px-8 gap-4 md:gap-6 z-10 transition-colors duration-300">
+          <header className="h-[80px] border-b border-card-border bg-card-bg flex items-center justify-between md:justify-end px-4 md:px-8 gap-4 md:gap-6 relative z-50 transition-colors duration-300">
             {/* Mobile Hamburger */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
