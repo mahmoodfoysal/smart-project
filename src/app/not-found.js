@@ -1,9 +1,11 @@
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground font-sans p-6">
-      <div className="max-w-md w-full bg-card-bg border border-card-border rounded-3xl p-10 shadow-2xl flex flex-col items-center text-center">
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground font-sans p-6 relative">
+      <ThemeToggle />
+      <div className="max-w-md w-full bg-card-bg border border-card-border rounded-3xl p-10 shadow-2xl flex flex-col items-center text-center z-10">
         <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
           <svg
             className="w-12 h-12 text-red-500"

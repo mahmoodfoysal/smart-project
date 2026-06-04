@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // Check initial theme from localStorage or system preference
@@ -19,6 +20,7 @@ export default function ThemeToggle() {
       setIsDark(false);
       document.documentElement.classList.remove("dark");
     }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
@@ -32,6 +34,13 @@ export default function ThemeToggle() {
       setIsDark(true);
     }
   };
+
+  if (!mounted) {
+    return (
+      <button className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center bg-card-bg/50 backdrop-blur border border-card-border shadow-sm z-50">
+      </button>
+    );
+  }
 
   return (
     <button

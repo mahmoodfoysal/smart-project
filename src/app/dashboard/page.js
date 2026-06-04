@@ -113,7 +113,12 @@ export default function DashboardPage() {
   // --- 2. Chart Configurations (ApexCharts) ---
 
   const commonChartOptions = {
-    chart: { toolbar: { show: false }, background: "transparent", fontFamily: "inherit" },
+    chart: { 
+      toolbar: { show: false }, 
+      background: "transparent", 
+      fontFamily: "inherit",
+      animations: { enabled: false } 
+    },
     tooltip: { theme: "dark" },
     stroke: { width: 0 },
     dataLabels: { enabled: false },
