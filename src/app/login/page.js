@@ -210,6 +210,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   required
+                  suppressHydrationWarning
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-input-bg border border-input-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200 text-foreground placeholder:text-foreground/40"
@@ -228,6 +229,7 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   required
+                  suppressHydrationWarning
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-input-bg border border-input-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200 text-foreground placeholder:text-foreground/40"

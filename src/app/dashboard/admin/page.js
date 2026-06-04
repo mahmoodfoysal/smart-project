@@ -25,6 +25,10 @@ export default function ManageAdminPage() {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   // Drawer & Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -203,6 +207,17 @@ export default function ManageAdminPage() {
     );
   });
 
+  // Reset page when searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredAdmins.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+
   return (
     <AdminRoute>
     <div className="h-full flex flex-col font-sans">
@@ -290,10 +305,11 @@ export default function ManageAdminPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-auto flex-1 h-0">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-background/50 border-b border-card-border text-[10px] uppercase tracking-wider text-text-muted">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-background/80 backdrop-blur border-b border-card-border text-[10px] uppercase tracking-wider text-text-muted">
+                <th className="px-6 py-4 font-bold w-16">SL</th>
                 <th className="px-6 py-4 font-bold">User</th>
                 <th className="px-6 py-4 font-bold">Role</th>
                 <th className="px-6 py-4 font-bold">Role ID</th>
@@ -339,10 +355,10 @@ export default function ManageAdminPage() {
                     {error}
                   </td>
                 </tr>
-              ) : filteredAdmins.length === 0 ? (
+              ) : currentItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="4"
+                    colSpan="5"
                     className="px-6 py-12 text-center text-text-muted text-sm font-semibold"
                   >
                     <p>No users found matching your search.</p>
@@ -357,16 +373,19 @@ export default function ManageAdminPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAdmins.map((admin) => (
+                currentItems.map((admin, index) => (
                   <tr
                     key={admin.id || admin._id}
                     className="hover:bg-background/30 transition-colors"
                   >
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-text-muted">
+                      {indexOfFirstItem + index + 1}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div>
                           <p className="text-sm font-bold text-foreground">
-                            {admin.name}
+                            {admin.full_name || admin.name}
                           </p>
                           <p className="text-xs text-text-muted">
                             {admin.email}
@@ -428,6 +447,56 @@ export default function ManageAdminPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-card-border flex items-center justify-between bg-background/30">
+            <div className="text-xs text-text-muted font-semibold uppercase tracking-wider">
+              Showing <span className="text-foreground">{indexOfFirstItem + 1}</span> to{" "}
+              <span className="text-foreground">
+                {Math.min(indexOfLastItem, filteredAdmins.length)}
+              </span>{" "}
+              of <span className="text-foreground">{filteredAdmins.length}</span> Users
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-card-border text-text-muted hover:text-foreground hover:bg-card-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <div className="flex items-center gap-1 px-2">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                      currentPage === i + 1
+                        ? "bg-primary text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+                        : "text-text-muted hover:text-foreground hover:bg-card-border/50 border border-transparent hover:border-card-border"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-card-border text-text-muted hover:text-foreground hover:bg-card-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Embedded Drawer */}

@@ -546,10 +546,11 @@ export default function ManageProjectsPage() {
 
       {/* Main Table Area */}
       <div className="flex-1 bg-card-bg border border-card-border rounded-2xl shadow-sm overflow-hidden flex flex-col relative">
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-auto flex-1 h-0">
           <table className="w-full text-left border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-background/80 backdrop-blur border-b border-card-border text-xs uppercase tracking-wider text-text-muted">
+                <th className="px-6 py-4 font-bold w-16">SL</th>
                 <th className="px-6 py-4 font-bold w-1/3">Project Identity</th>
                 <th className="px-6 py-4 font-bold">Progress</th>
                 <th className="px-6 py-4 font-bold w-32">Status</th>
@@ -560,14 +561,14 @@ export default function ManageProjectsPage() {
             <tbody className="divide-y divide-card-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center">
+                  <td colSpan="6" className="px-6 py-12 text-center">
                     <span className="loading loading-spinner loading-lg text-primary"></span>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="px-6 py-8 text-center text-red-500 text-sm font-bold"
                   >
                     {error}
@@ -576,14 +577,14 @@ export default function ManageProjectsPage() {
               ) : paginatedProjects.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="px-6 py-12 text-center text-text-muted text-sm font-semibold"
                   >
                     <p>No projects found matching your criteria.</p>
                   </td>
                 </tr>
               ) : (
-                paginatedProjects.map((project) => {
+                paginatedProjects.map((project, index) => {
                   // Calculate progress
                   const tasks = project.tasks || [];
                   const total = tasks.length;
@@ -598,6 +599,9 @@ export default function ManageProjectsPage() {
                       key={project.id || project._id}
                       className="hover:bg-background/30 transition-colors"
                     >
+                      <td className="px-6 py-4 text-xs font-bold text-text-muted">
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <p className="text-sm font-bold text-foreground">
@@ -778,32 +782,50 @@ export default function ManageProjectsPage() {
         </div>
 
         {/* Client-Side Pagination Footer */}
-        {!isLoading && !error && processedProjects.length > 0 && (
-          <div className="p-4 border-t border-card-border bg-background/50 flex items-center justify-between shrink-0">
-            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, processedProjects.length)}{" "}
-              of {processedProjects.length}
-            </span>
-            <div className="join">
+        {!isLoading && !error && processedProjects.length > 0 && totalPages > 1 && (
+          <div className="p-4 border-t border-card-border flex items-center justify-between bg-background/30 mt-auto shrink-0">
+            <div className="text-xs text-text-muted font-semibold uppercase tracking-wider">
+              Showing <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+              <span className="text-foreground">
+                {Math.min(currentPage * itemsPerPage, processedProjects.length)}
+              </span>{" "}
+              of <span className="text-foreground">{processedProjects.length}</span> Projects
+            </div>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="join-item btn btn-sm bg-card-bg border-card-border text-foreground hover:bg-background"
+                className="p-1.5 rounded-lg border border-card-border text-text-muted hover:text-foreground hover:bg-card-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                «
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
-              <button className="join-item btn btn-sm bg-card-bg border-card-border text-foreground pointer-events-none">
-                Page {currentPage}
-              </button>
+              
+              <div className="flex items-center gap-1 px-2">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                      currentPage === i + 1
+                        ? "bg-primary text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+                        : "text-text-muted hover:text-foreground hover:bg-card-border/50 border border-transparent hover:border-card-border"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
               <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="join-item btn btn-sm bg-card-bg border-card-border text-foreground hover:bg-background"
+                className="p-1.5 rounded-lg border border-card-border text-text-muted hover:text-foreground hover:bg-card-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                »
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
           </div>

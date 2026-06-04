@@ -129,7 +129,11 @@ export default function DashboardPage() {
   });
 
   // Get real persistent activities
-  const recentActivities = getActivities().slice(0, 5);
+  let allActivities = getActivities();
+  if (isTeamMember && user?.email) {
+    allActivities = allActivities.filter(a => a.message.toLowerCase().includes(user.email.toLowerCase()));
+  }
+  const recentActivities = allActivities.slice(0, 5);
 
   // --- 2. Chart Configurations (ApexCharts) ---
 
